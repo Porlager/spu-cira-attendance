@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}ห้องเรียน{% endblock %}
+{% block scripts %}<script defer src="/static/js/live.js"></script>{% endblock %}
+{% block heading %}ห้องเรียน{% endblock %}
+{% block content %}
+<section class="card empty-card" id="no-session" hidden>
+  <h2>ยังไม่ได้เปิดคาบเรียน</h2>
+  <p class="muted">เปิดคาบก่อน แล้วให้ CiRA CORE ส่งผลตรวจจับเข้ามา ระบบจะเช็คชื่อและสรุปพฤติกรรมในห้องให้</p>
+  <form class="inline-form" id="open-form">
+    <input type="text" id="open-title" placeholder="เช่น CPE447 · ห้อง 11-501" maxlength="100" required aria-label="ชื่อคาบเรียน">
+    <button class="btn btn-primary">เปิดคาบเรียน</button>
+  </form>
+  <p class="hint">ยังไม่มีโมเดลใน CiRA? ทดลองหน้าจอด้วย <code>python integrations/simulate_cira.py</code> ซึ่งจะเปิดคาบจำลองแยกให้เอง</p>
+</section>
+
+<div id="live-body" hidden>
+  <section class="stats" aria-label="สรุปคาบนี้">
+    <div class="stat">
+      <div class="stat-label">เข้าเรียน</div>
+      <div class="stat-value"><span id="kpi-present">0</span><span class="stat-of" id="kpi-registered">/0</span></div>
+      <div class="stat-note">จำหน้าได้และเช็คชื่อแล้ว</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">ตั้งใจเรียน</div>
+      <div class="stat-value" id="kpi-attentive">—</div>
+      <div class="stat-note" id="kpi-window">ยังไม่มีข้อมูลพฤติกรรม</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">หลับ</div>
+      <div class="stat-value" id="kpi-sleeping">—</div>
+      <div class="stat-note">นับทั้งห้อง รวมคนที่ระบุตัวไม่ได้</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">คนในภาพ</div>
+      <div class="stat-value" id="kpi-people">—</div>
+      <div class="stat-note">เฉลี่ยช่วงสั้นล่าสุด</div>
+    </div>
+    <div class="stat" id="kpi-phone-card" hidden>
+      <div class="stat-label">ใช้โทรศัพท์</div>
+      <div class="stat-value" id="kpi-phone">—</div>
+      <div class="stat-note">ทดลอง กล้องอาจมองไม่เห็น</div>
+    </div>
+  </section>
+
+  <div class="live-grid">
+    <section class="card">
+      <div class="card-head">
+        <h2 id="stage-title">ภาพล่าสุดจาก CiRA</h2>
+        <div class="segmented" role="group" aria-label="แหล่งภาพ" id="modes">
+          <button type="button" data-mode="cira" aria-pressed="true">CiRA</button>
+          <button type="button" data-mode="camera" aria-pressed="false">กล้องเครื่องนี้</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stage" id="stage">
+          <canvas id="frame" role="img" aria-label="ภาพและกรอบผลตรวจจับจาก CiRA"></canvas>
+          <video id="video" autoplay playsinline muted hidden></video>
+          <canvas id="overlay" class="overlay" hidden></canvas>
+        </div>
+        <div class="stage-foot">
+          <div class="legend" id="legend"></div>
+          <div class="row" id="camera-controls" hidden>
+            <button type="button" class="btn btn-secondary" id="camera-button">เปิดกล้อง</button>
+            <button type="button" class="btn btn-primary" id="scan-button" disabled>เริ่มเช็คชื่อ</button>
+          </div>
+        </div>
+        <p class="hint" id="frame-meta"></p>
+        <p class="hint">ผลพฤติกรรมเป็นการประเมินจากโมเดล อาจผิดพลาด ใช้ประกอบการสังเกตของผู้สอนเท่านั้น ไม่ควรใช้ตัดคะแนน</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>รายชื่อ</h2>
+        <span class="muted small" id="roster-total"></span>
+      </div>
+      <div class="tabs" role="group" aria-label="กรองรายชื่อ" id="filters">
+        <button type="button" data-filter="all" aria-pressed="true">ทั้งหมด <span></span></button>
+        <button type="button" data-filter="present" aria-pressed="false">มาเรียน <span></span></button>
+        <button type="button" data-filter="absent" aria-pressed="false">ยังไม่พบ <span></span></button>
+        <button type="button" data-filter="sleeping" aria-pressed="false">หลับ <span></span></button>
+      </div>
+      <div class="table-wrap roster">
+        <table>
+          <thead><tr><th>รหัส</th><th>ชื่อ</th><th>เช็คชื่อ</th><th>พฤติกรรม</th><th class="num">ตั้งใจ</th></tr></thead>
+          <tbody id="roster"></tbody>
+        </table>
+        <div class="empty" id="roster-empty" hidden></div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

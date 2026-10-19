@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}ลงทะเบียนใบหน้า{% endblock %}
+{% block scripts %}<script defer src="/static/js/enroll.js"></script>{% endblock %}
+{% block heading %}ลงทะเบียนใบหน้า{% endblock %}
+{% block content %}
+<div class="split">
+  <section class="card">
+    <div class="card-head">
+      <h2>กล้อง</h2>
+      <span class="muted small" id="camera-state">ปิดอยู่</span>
+    </div>
+    <div class="card-body">
+      <div class="stage stage-43">
+        <video id="video" autoplay playsinline muted hidden></video>
+        <div class="stage-empty" id="camera-empty">เปิดกล้องเพื่อถ่ายภาพใบหน้า</div>
+      </div>
+      <div class="row">
+        <button type="button" class="btn btn-secondary" id="camera-button">เปิดกล้อง</button>
+        <button type="button" class="btn btn-primary" id="capture" disabled>ถ่ายภาพ</button>
+        <span class="muted small" id="sample-count">0 / 8 ภาพ</span>
+      </div>
+      <div class="thumbs" id="samples"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>ข้อมูลนักศึกษา</h2></div>
+    <form class="card-body form" id="enroll-form" novalidate>
+      <label class="field">รหัสนักศึกษา
+        <input type="text" id="student-id" maxlength="30" pattern="[A-Za-z0-9_\-]+" placeholder="เช่น 67000001" autocomplete="off">
+      </label>
+      <label class="field">ชื่อ–นามสกุล
+        <input type="text" id="student-name" maxlength="100" autocomplete="off">
+      </label>
+      <label class="check">
+        <input type="checkbox" id="consent">
+        <span>เจ้าของใบหน้ายินยอมให้ใช้ภาพเพื่อเช็คชื่อในโครงงานนี้ และรับทราบว่าขอลบข้อมูลได้ทุกเมื่อ</span>
+      </label>
+      <ul class="tips">
+        <li>ถ่าย 3–8 ภาพ แต่ละภาพมีใบหน้าเดียว</li>
+        <li>หันซ้าย ขวา เงย ก้มเล็กน้อยระหว่างภาพ</li>
+        <li>แสงพอ ไม่ย้อนแสง ไม่ใส่แมสก์หรือแว่นกันแดด</li>
+      </ul>
+      <div class="row">
+        <button class="btn btn-primary" id="save-student" disabled>บันทึกใบหน้า</button>
+        <span class="muted small" id="save-hint">ต้องมีอย่างน้อย 3 ภาพ และติ๊กยินยอม</span>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

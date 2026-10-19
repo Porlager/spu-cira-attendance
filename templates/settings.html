@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}ตั้งค่า CiRA{% endblock %}
+{% block scripts %}<script defer src="/static/js/settings.js"></script>{% endblock %}
+{% block heading %}ตั้งค่า CiRA{% endblock %}
+{% block actions %}
+<button type="submit" form="settings-form" class="btn btn-primary" id="save">บันทึกการตั้งค่า</button>
+{% endblock %}
+{% block content %}
+<div class="settings">
+  <form id="settings-form" class="stack" novalidate>
+    <section class="card">
+      <div class="card-head">
+        <h2>การจับคู่คลาส</h2>
+        <button type="button" class="btn btn-secondary btn-sm" id="add-row">เพิ่มคลาส</button>
+      </div>
+      <div class="card-body stack">
+        <p class="muted small">ใส่ชื่อคลาสให้ตรงกับที่โมเดล DeepDetect ใน CiRA ส่งออกมา (ดูจาก Debug node) แล้วเลือกว่าหมายถึงพฤติกรรมอะไร ตัวพิมพ์เล็ก/ใหญ่ไม่มีผล</p>
+        <table class="mapping">
+          <thead><tr><th>ชื่อคลาสจาก CiRA</th><th>หมายถึง</th><th></th></tr></thead>
+          <tbody id="mapping"></tbody>
+        </table>
+        <div id="unmapped-box" hidden>
+          <div class="small muted">คลาสที่ CiRA ส่งมาแต่ยังไม่ได้จับคู่ (ระบบข้ามไว้)</div>
+          <div class="chips" id="unmapped"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>รูปแบบข้อมูลจาก CiRA</h2></div>
+      <div class="card-body grid-2">
+        <label class="field">ตำแหน่ง x, y ของกรอบ
+          <select id="box_origin">
+            <option value="topleft">มุมซ้ายบน</option>
+            <option value="center">จุดกึ่งกลาง</option>
+          </select>
+        </label>
+        <label class="field">หน่วยพิกัด
+          <select id="coord_units">
+            <option value="pixel">พิกเซล (ต้องส่ง width, height)</option>
+            <option value="normalized">สัดส่วน 0–1</option>
+          </select>
+        </label>
+        <label class="field">สเกล confidence
+          <select id="confidence_scale">
+            <option value="1">0–1</option>
+            <option value="100">0–100</option>
+          </select>
+        </label>
+        <label class="field">confidence ขั้นต่ำ (0–1)
+          <input type="number" id="min_confidence" min="0" max="1" step="0.05">
+        </label>
+        <p class="hint span-2">ถ้ากรอบบนหน้าห้องเรียนเลื่อนไปทางซ้ายบนครึ่งหนึ่งของขนาดกรอบ ให้เปลี่ยนเป็น "จุดกึ่งกลาง"</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>พฤติกรรม</h2></div>
+      <div class="card-body stack">
+        <label class="field narrow">ยืนยันสถานะรายคนเมื่อเห็นติดกัน (เฟรม)
+          <input type="number" id="smoothing_frames" min="1" max="10" step="1">
+        </label>
+        <p class="hint">กันสถานะกระพริบ เช่น ตั้งไว้ 3 = ต้องเห็นว่าหลับ 3 เฟรมติดกันก่อนขึ้นว่า "หลับ"</p>
+        <label class="check">
+          <input type="checkbox" id="phone_enabled">
+          <span>ตรวจการใช้โทรศัพท์ <span class="badge">ทดลอง</span><br><span class="muted small">ปิดไว้เป็นค่าเริ่มต้น กล้องหน้าห้องมักมองไม่เห็นโทรศัพท์เพราะโดนคนข้างหน้าบัง เมื่อปิด กรอบโทรศัพท์จะนับเป็นคนในภาพเท่านั้น</span></span>
+        </label>
+      </div>
+    </section>
+  </form>
+
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>การเชื่อมต่อ</h2></div>
+      <div class="card-body">
+        <dl class="facts">
+          <dt>สถานะ</dt><dd id="conn-status">—</dd>
+          <dt>Endpoint</dt><dd><code id="endpoint"></code></dd>
+          <dt>ไฟล์ API key</dt><dd><code id="token-file"></code></dd>
+        </dl>
+        <p class="hint">ใน Python node ของ CiRA เรียกใช้ <code>integrations/cira_bridge.py</code> หรือส่ง HTTP POST พร้อม header <code>X-API-Key</code> ที่อ่านจากไฟล์ด้านบน อย่าฝังคีย์ลงใน flow</p>
+        <pre class="code" id="example"></pre>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>ผลลัพธ์ล่าสุดจาก CiRA</h2>
+        <span class="muted small">อัปเดตทุก 3 วินาที</span>
+      </div>
+      <div class="card-body stack" id="outputs">
+        <p class="muted small">ยังไม่มีข้อมูล ส่ง <code>python integrations/cira_bridge.py --ping</code> เพื่อทดสอบ</p>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

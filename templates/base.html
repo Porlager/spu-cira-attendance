@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="api-key" content="{{ api_token }}">
+<title>{% block title %}{% endblock %} · SPU Classroom</title>
+<link rel="stylesheet" href="/static/style.css">
+<script defer src="/static/js/common.js"></script>
+{% block scripts %}{% endblock %}
+</head>
+<body data-page="{{ page }}">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-name">SPU Classroom</span>
+      <span class="brand-sub">ต้นแบบโครงงาน × CiRA CORE</span>
+    </div>
+    <nav class="nav" aria-label="เมนูหลัก">
+      {% for href, key, label in [("/", "live", "ห้องเรียน"), ("/enroll", "enroll", "ลงทะเบียนใบหน้า"), ("/students", "students", "นักศึกษา"), ("/reports", "reports", "รายงาน"), ("/settings", "settings", "ตั้งค่า CiRA")] %}
+      <a href="{{ href }}"{% if page == key %} aria-current="page"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <p class="sidebar-note">ข้อมูลใบหน้าและการเข้าเรียนเก็บในเครื่องนี้เท่านั้น ไม่ใช่ระบบทางการของมหาวิทยาลัย</p>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <div class="session">
+        <span class="session-title" id="session-title">ยังไม่เปิดคาบเรียน</span>
+        <span class="session-meta" id="session-meta"></span>
+        <span class="badge badge-sim" id="sim-badge" hidden>ข้อมูลจำลอง</span>
+      </div>
+      <div class="topbar-right">
+        <span class="cira-status" id="cira-status" data-status="offline"><span class="dot" aria-hidden="true"></span><span id="cira-text">ยังไม่ได้รับข้อมูลจาก CiRA</span></span>
+        <button type="button" class="btn btn-secondary btn-sm" id="close-session" hidden>ปิดคาบ</button>
+      </div>
+    </header>
+    <main class="content">
+      <div class="message" id="message" role="status" aria-live="polite" hidden></div>
+      <div class="page-head">
+        <h1>{% block heading %}{% endblock %}</h1>
+        <div class="page-actions">{% block actions %}{% endblock %}</div>
+      </div>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+</body>
+</html>

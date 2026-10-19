@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}นักศึกษา{% endblock %}
+{% block scripts %}<script defer src="/static/js/students.js"></script>{% endblock %}
+{% block heading %}นักศึกษา <span class="muted" id="student-total"></span>{% endblock %}
+{% block actions %}
+<input type="search" id="search" placeholder="ค้นหารหัสหรือชื่อ" aria-label="ค้นหานักศึกษา">
+<a class="btn btn-primary" href="/enroll">ลงทะเบียนเพิ่ม</a>
+{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>รหัส</th><th>ชื่อ</th><th class="num">ภาพใบหน้า</th><th class="num">คาบที่เข้าเรียน</th><th>ลงทะเบียนเมื่อ</th><th></th></tr></thead>
+      <tbody id="students"></tbody>
+    </table>
+    <div class="empty" id="students-empty" hidden></div>
+  </div>
+</section>
+<p class="hint">ลบแล้วจะลบภาพใบหน้า ประวัติเช็คชื่อ และพฤติกรรมของคนนั้นทุกคาบ ย้อนคืนไม่ได้</p>
+{% endblock %}

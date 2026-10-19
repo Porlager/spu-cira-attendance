@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}รายงาน{% endblock %}
+{% block scripts %}<script defer src="/static/js/reports.js"></script>{% endblock %}
+{% block heading %}รายงาน{% endblock %}
+{% block actions %}
+<select id="session-select" aria-label="เลือกคาบเรียน"></select>
+<button type="button" class="btn btn-secondary" id="export" disabled>ดาวน์โหลด CSV</button>
+{% endblock %}
+{% block content %}
+<section class="card empty-card" id="report-empty" hidden>
+  <h2>ยังไม่มีคาบเรียน</h2>
+  <p class="muted">เปิดคาบในหน้าห้องเรียน เมื่อมีข้อมูลแล้วรายงานจะแสดงที่นี่</p>
+</section>
+
+<div id="report" hidden>
+  <section class="stats" aria-label="สรุปคาบ">
+    <div class="stat">
+      <div class="stat-label">เข้าเรียน</div>
+      <div class="stat-value"><span id="r-present">0</span><span class="stat-of" id="r-registered">/0</span></div>
+      <div class="stat-note" id="r-time"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">ตั้งใจเรียนเฉลี่ย</div>
+      <div class="stat-value" id="r-attentive">—</div>
+      <div class="stat-note">รวมทุกเฟรมทั้งคาบ</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">หลับพร้อมกันสูงสุด</div>
+      <div class="stat-value" id="r-sleeping">—</div>
+      <div class="stat-note">คนในเฟรมเดียว</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">เฟรมจาก CiRA</div>
+      <div class="stat-value" id="r-frames">0</div>
+      <div class="stat-note" id="r-sources"></div>
+    </div>
+  </section>
+
+  <div class="chart-grid">
+    <section class="card">
+      <div class="card-head"><h2>ตั้งใจเรียน (%) รายนาที</h2></div>
+      <div class="card-body"><svg class="chart" id="chart-attentive" role="img" aria-label="กราฟเปอร์เซ็นต์ตั้งใจเรียนรายนาที"></svg></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>จำนวนคนหลับเฉลี่ย รายนาที</h2></div>
+      <div class="card-body"><svg class="chart" id="chart-sleeping" role="img" aria-label="กราฟจำนวนคนหลับรายนาที"></svg></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>รายบุคคล</h2>
+      <div class="legend" id="share-legend"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>รหัส</th><th>ชื่อ</th><th>เช็คชื่อ</th><th>แหล่งที่มา</th><th class="num">เฟรม</th><th>สัดส่วนพฤติกรรม</th><th class="num">ตั้งใจ</th><th class="num">หลับ</th></tr></thead>
+        <tbody id="report-students"></tbody>
+      </table>
+    </div>
+  </section>
+  <p class="hint">สัดส่วนนับจากเฟรมที่จับคู่ใบหน้ากับกรอบพฤติกรรมได้เท่านั้น ไม่ใช่จำนวนนาทีจริง คนที่ก้มหน้าหลับมักระบุตัวไม่ได้และจะอยู่ในยอดรวมของห้องแทน</p>
+</div>
+{% endblock %}

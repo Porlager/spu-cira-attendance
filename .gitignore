@@ -1,0 +1,12 @@
+# Local biometric and classroom data must never be committed
+/data/
+*.sqlite*
+*.db
+*.yml.model
+.env
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.DS_Store
+/exports/
