@@ -1,0 +1,84 @@
+/* Print styles shared by the CiRA guide and the web preview (rendered to PDF with Chrome). */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "Sukhumvit Set", "Segoe UI", "Leelawadee UI", "Noto Sans Thai", Tahoma, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --text: #1c1f24; --text-2: #4a515c; --text-3: #6b7280;
+  --border: #e2e5ea; --surface-2: #f4f5f7; --accent: #1f5fd1; --accent-weak: #edf2fc;
+  --in: #1f5fd1; --out: #2f7d4f; --warn: #87560f; --warn-bg: #fff6e5; --danger: #b42318;
+}
+@page {
+  size: A4;
+  margin: 16mm 15mm 18mm;
+  @bottom-left { content: "SPU Classroom × CiRA CORE"; font: 8pt var(--font); color: #9aa1ab; }
+  @bottom-right { content: counter(page) " / " counter(pages); font: 8pt var(--font); color: #9aa1ab; }
+}
+@page cover { @bottom-left { content: none; } @bottom-right { content: none; } }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font: 10pt/1.7 var(--font); color: var(--text); }
+h1, h2, h3, h4 { margin: 0; font-weight: 600; break-after: avoid; }
+h1 { font-size: 24pt; line-height: 1.3; }
+h2 { font-size: 15pt; margin: 0 0 10pt; padding-top: 2pt; }
+h3 { font-size: 11.5pt; margin: 16pt 0 6pt; }
+h4 { font-size: 10pt; margin: 10pt 0 4pt; }
+p { margin: 0 0 7pt; }
+ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+li { margin-bottom: 3pt; }
+a { color: var(--accent); text-decoration: none; }
+code { font: 8.6pt var(--mono); background: var(--surface-2); padding: 0.5pt 4pt; border-radius: 3pt; overflow-wrap: anywhere; }
+pre { margin: 6pt 0 10pt; padding: 9pt 11pt; background: var(--surface-2); border: 0.6pt solid var(--border); border-radius: 4pt; font: 8.4pt/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; break-inside: avoid; }
+pre code { background: none; padding: 0; font: inherit; }
+pre .c { color: #6b7280; }
+table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 9pt; break-inside: auto; }
+tr { break-inside: avoid; }
+th { text-align: left; font-weight: 600; color: var(--text-2); border-bottom: 1pt solid var(--border); padding: 4pt 8pt 4pt 0; }
+td { border-bottom: 0.6pt solid var(--border); padding: 4pt 8pt 4pt 0; vertical-align: top; }
+td code { white-space: nowrap; }
+figure { margin: 8pt 0 12pt; break-inside: avoid; }
+figcaption { font-size: 8.5pt; color: var(--text-3); margin-top: 4pt; }
+img { max-width: 100%; display: block; border: 0.6pt solid var(--border); border-radius: 4pt; }
+.muted { color: var(--text-3); }
+.small { font-size: 8.5pt; }
+.page { break-before: page; }
+section + section { margin-top: 18pt; }
+.lead { font-size: 11pt; color: var(--text-2); }
+.note { margin: 8pt 0 12pt; padding: 8pt 11pt; border-left: 2.5pt solid var(--accent); background: var(--accent-weak); break-inside: avoid; }
+.note.warn { border-color: #d39a35; background: var(--warn-bg); }
+.note.danger { border-color: var(--danger); background: #fdeceb; }
+.note p:last-child, .note ul:last-child { margin-bottom: 0; }
+.tag { display: inline-block; padding: 0 6pt; border-radius: 3pt; font-size: 8pt; font-weight: 600; line-height: 14pt; vertical-align: 1pt; }
+.tag.in { background: #e3ecfb; color: var(--in); }
+.tag.out { background: #e6f2eb; color: var(--out); }
+.steps { counter-reset: step; list-style: none; padding: 0; }
+.steps > li { counter-increment: step; position: relative; padding-left: 24pt; margin-bottom: 8pt; break-inside: avoid; }
+.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 16pt; height: 16pt; border-radius: 50%; background: var(--text); color: #fff; font-size: 8.5pt; font-weight: 600; text-align: center; line-height: 16pt; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
+.check li { list-style: none; position: relative; padding-left: 4pt; }
+.check li::before { content: ""; position: absolute; left: -14pt; top: 3.5pt; width: 8pt; height: 8pt; border: 0.9pt solid var(--text-2); border-radius: 1.5pt; }
+.toc { columns: 2; column-gap: 24pt; padding-left: 16pt; }
+
+/* cover */
+.cover { page: cover; height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+.cover .eyebrow { font-size: 10pt; color: var(--text-3); margin-bottom: 10pt; }
+.cover h1 { font-size: 28pt; }
+.cover .lead { font-size: 12pt; margin-top: 10pt; max-width: 140mm; }
+.cover dl { display: grid; grid-template-columns: max-content 1fr; gap: 4pt 16pt; font-size: 9.5pt; margin: 0; }
+.cover dt { color: var(--text-3); }
+.cover dd { margin: 0; }
+
+/* diagrams */
+svg.diagram { width: 100%; height: auto; display: block; font-family: var(--font); }
+svg .box { fill: #fff; stroke: #cdd2da; stroke-width: 1; }
+svg .box-cira { fill: #f4f5f7; }
+svg .box-web { fill: #f7f9fe; stroke: #b7c8ec; }
+svg .t { font-size: 11px; fill: var(--text); }
+svg .t-b { font-size: 11.5px; font-weight: 600; fill: var(--text); }
+svg .t-s { font-size: 9.5px; fill: var(--text-3); }
+svg .arrow-in { stroke: var(--in); stroke-width: 1.6; fill: none; }
+svg .arrow-out { stroke: var(--out); stroke-width: 1.6; fill: none; }
+svg .arrow { stroke: #8a929e; stroke-width: 1.3; fill: none; }
+svg .lbl-in { font-size: 10px; fill: var(--in); font-weight: 600; }
+svg .lbl-out { font-size: 10px; fill: var(--out); font-weight: 600; }
+svg .frame { fill: #eef0f3; stroke: #cdd2da; }
+svg .bb { fill: none; stroke: #c23a2b; stroke-width: 1.6; }
+svg .pt { fill: #1f5fd1; }

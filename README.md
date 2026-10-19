@@ -33,7 +33,7 @@ Windows ใช้ `py -m venv .venv` และ `.venv\Scripts\activate` แท�
 
 1. หน้า **ลงทะเบียนใบหน้า**: เปิดกล้อง ถ่ายอย่างน้อย 3 ภาพ กรอกรหัสและชื่อ ติ๊กยินยอม แล้วบันทึก
 2. หน้า **ห้องเรียน**: เปิดคาบ เช่น `CPE447 · ห้อง 11-501`
-3. ให้ CiRA CORE ส่งผลเข้ามาตาม [คู่มือต่อ CiRA CORE](docs/CIRA_SETUP.md) หรือสลับเป็น "กล้องเครื่องนี้" เพื่อเช็คชื่อจากเว็บแคม (ไม่ตรวจพฤติกรรม)
+3. ให้ CiRA CORE ส่งผลเข้ามาตาม [คู่มือต่อ CiRA CORE (PDF)](docs/CIRA_GUIDE.pdf) หรือ [ฉบับย่อ](docs/CIRA_SETUP.md) หรือสลับเป็น "กล้องเครื่องนี้" เพื่อเช็คชื่อจากเว็บแคม (ไม่ตรวจพฤติกรรม)
 4. ตรวจทานผลกับคนจริง ปิดคาบ แล้วดาวน์โหลด CSV จากหน้า **รายงาน**
 
 ## ทดลองโดยยังไม่มีโมเดล
@@ -65,9 +65,10 @@ behavior.py                กติกาพฤติกรรม: แปลง
 vision.py                  Haar face detector + LBPH recognizer
 templates/ static/         หน้าเว็บภาษาไทย 5 หน้า (vanilla JS, ไม่ใช้ CDN)
 integrations/cira_bridge.py    ส่งผล CiRA เข้า web app
+integrations/cira_python_plus.py  โค้ดสำหรับ Python+ node ใน CiRA (INPUT + OUTPUT)
 integrations/simulate_cira.py  ข้อมูลจำลองสำหรับสาธิต
 tests/                     isolated tests, no real student data
-docs/                      integration guide and presentation outline
+docs/                      CiRA guide (PDF), web preview (PDF), presentation outline
 data/                      LOCAL ONLY, auto-created and ignored
 ```
 
@@ -82,7 +83,7 @@ CI ทดสอบ Python 3.11 บน GitHub Actions โดยใช้ฐาน
 
 ## สถานะ CiRA CORE
 
-มี API, bridge และตัวจำลองที่ทดสอบด้วยข้อมูลสังเคราะห์ **ยังไม่ได้ตรวจรับบน CiRA CORE หรือกล้องห้องเรียนจริง และยังไม่มีโมเดลตรวจพฤติกรรม** ชื่อคลาสเริ่มต้น (`awake`, `distracted`, `sleep`, `phone`, `person`) เป็นค่าตัวอย่าง ต้องแก้ให้ตรงกับโมเดลที่ฝึกจริงในหน้าตั้งค่า ไม่มี native CiRA flow รวมอยู่ใน repo
+มี API, bridge และตัวจำลองที่ทดสอบด้วยข้อมูลสังเคราะห์ **ยังไม่ได้ตรวจรับบน CiRA CORE หรือกล้องห้องเรียนจริง และยังไม่มีโมเดลตรวจพฤติกรรม** ชื่อคลาสเริ่มต้น (`awake`, `distracted`, `sleep`, `phone`, `person`) เป็นค่าตัวอย่าง ต้องแก้ให้ตรงกับโมเดลที่ฝึกจริงในหน้าตั้งค่า รูปแบบกรอบตั้งตามเอกสาร CiRA (x,y จุดกึ่งกลาง, พิกเซล, confidence 0–1) ไม่มี native CiRA flow รวมอยู่ใน repo มีเพียงโค้ด Python+ node ที่ทดสอบกับตัวจำลอง
 
 ## ข้อจำกัดที่ต้องอธิบายตอนส่ง
 

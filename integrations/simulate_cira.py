@@ -63,8 +63,10 @@ def step(rng, state, labels):
     return state
 
 
-def make_frame(rng, people, labels, face_visible=0.8):
-    """Advance every simulated student one frame and build a /api/cira/frame payload."""
+def make_frame(rng, people, labels, face_visible=0.8, settings=None):
+    """Advance every simulated student one frame and build a /api/cira/frame payload
+    in the box format the web app is configured for (like a real CiRA model would)."""
+    settings = settings or {"box_origin": "topleft", "coord_units": "pixel", "confidence_scale": 1}
     detections = []
     for person in people:
         person["state"] = step(rng, person["state"], labels)
@@ -73,8 +75,12 @@ def make_frame(rng, people, labels, face_visible=0.8):
         x, y, w, h = person["box"]
         x = min(max(0, x + rng.randint(-3, 3)), WIDTH - w)
         y = min(max(0, y + rng.randint(-3, 3)), HEIGHT - h)
-        obj = {"name": labels[person["state"]], "confidence": round(rng.uniform(0.6, 0.97), 2),
-               "x": x, "y": y, "w": w, "h": h}
+        if settings["box_origin"] == "center":
+            x, y = x + w / 2, y + h / 2
+        if settings["coord_units"] == "normalized":
+            x, y, w, h = x / WIDTH, y / HEIGHT, w / WIDTH, h / HEIGHT
+        confidence = round(rng.uniform(0.6, 0.97), 2) * settings["confidence_scale"]
+        obj = {"name": labels[person["state"]], "confidence": round(confidence, 2), "x": x, "y": y, "w": w, "h": h}
         # Sleepers usually have their face down, so the simulator never identifies them.
         if person.get("student_id") and person["state"] != "sleeping" and rng.random() < face_visible:
             obj["student_id"] = person["student_id"]
@@ -92,6 +98,7 @@ def main():
     parser.add_argument("--seed", type=int)
     parser.add_argument("--with-identities", action="store_true", help="attach enrolled student ids to some seats")
     parser.add_argument("--keep-open", action="store_true", help="leave the simulated session open at the end")
+    parser.add_argument("--title", help="session title (the web still labels it ข้อมูลจำลอง)")
     args = parser.parse_args()
     call = {"token_file": args.token_file, "base_url": args.base_url}
 
@@ -104,7 +111,7 @@ def main():
     if session:
         session_id = session["id"]
     else:
-        title = "คาบจำลอง " + datetime.now().strftime("%H:%M")
+        title = args.title or "คาบจำลอง " + datetime.now().strftime("%H:%M")
         session_id = cira_bridge.post("/api/sessions", {"title": title, "simulated": True}, **call)["id"]
         opened = True
     identities = []
@@ -117,7 +124,7 @@ def main():
     end = time.monotonic() + args.seconds
     try:
         while time.monotonic() < end:
-            payload = make_frame(rng, people, labels)
+            payload = make_frame(rng, people, labels, settings=settings)
             payload["session_id"] = session_id
             result = cira_bridge.post("/api/cira/frame", payload, **call)
             print("เฟรม %d: คน %d · ตั้งใจ %s%% · หลับ %d" % (result["seq"], result["people"],

@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>คู่มือเชื่อมต่อ CiRA CORE กับ SPU Classroom</title>
+<link rel="stylesheet" href="print.css">
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div>
+    <div class="eyebrow">SPU Classroom · คู่มือสำหรับผู้ต่อ flow ฝั่ง CiRA CORE</div>
+    <h1>เชื่อมต่อ CiRA CORE<br>กับเว็บเช็คชื่อและตรวจพฤติกรรม</h1>
+    <p class="lead">ส่งผล DeepDetect จาก CiRA เข้าเว็บ (INPUT) และรับผลสรุปกลับเข้า flow ของ CiRA (OUTPUT) ตั้งแต่ติดตั้งจนตรวจรับบนเครื่องจริง</p>
+  </div>
+  <div>
+    <svg class="diagram" viewBox="0 0 640 190" role="img" aria-label="ภาพรวมการไหลของข้อมูล">
+      <defs>
+        <marker id="ai" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#1f5fd1"/></marker>
+        <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#2f7d4f"/></marker>
+        <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z" fill="#8a929e"/></marker>
+      </defs>
+      <rect x="4" y="14" width="318" height="170" rx="8" class="box box-cira"/>
+      <text x="18" y="34" class="t-b">CiRA CORE desktop (เพื่อนเป็นคนต่อ)</text>
+      <rect x="18" y="50" width="66" height="38" rx="5" class="box"/><text x="51" y="73" class="t" text-anchor="middle">Camera</text>
+      <rect x="100" y="50" width="84" height="38" rx="5" class="box"/><text x="142" y="73" class="t" text-anchor="middle">DeepDetect</text>
+      <rect x="200" y="50" width="108" height="38" rx="5" class="box"/><text x="254" y="67" class="t" text-anchor="middle">Python+</text><text x="254" y="80" class="t-s" text-anchor="middle">cira_python_plus.py</text>
+      <rect x="200" y="126" width="108" height="38" rx="5" class="box"/><text x="254" y="143" class="t" text-anchor="middle">Debug / JavaScript</text><text x="254" y="156" class="t-s" text-anchor="middle">ใช้ payload.spu</text>
+      <path d="M84 69h14" class="arrow" marker-end="url(#ag)"/><path d="M184 69h14" class="arrow" marker-end="url(#ag)"/>
+      <path d="M254 88v36" class="arrow" marker-end="url(#ag)"/>
+      <text x="18" y="120" class="t-s">อ่าน API key จาก</text>
+      <text x="18" y="134" class="t-s">data/api-token.txt</text>
+      <rect x="410" y="14" width="226" height="170" rx="8" class="box box-web"/>
+      <text x="424" y="34" class="t-b">เว็บ SPU Classroom</text>
+      <text x="424" y="52" class="t-s">python app.py · 127.0.0.1:5050</text>
+      <text x="424" y="84" class="t">เช็คชื่อด้วยใบหน้า</text>
+      <text x="424" y="102" class="t">ตั้งใจเรียน · หลับ · (มือถือ)</text>
+      <text x="424" y="120" class="t">หน้าห้องเรียนสด · รายงาน · CSV</text>
+      <text x="424" y="166" class="t-s">เก็บใน SQLite เครื่องนี้เท่านั้น</text>
+      <path d="M308 62h100" class="arrow-in" marker-end="url(#ai)"/>
+      <text x="318" y="54" class="lbl-in">INPUT  /api/cira/frame</text>
+      <path d="M408 80H310" class="arrow-out" marker-end="url(#ao)"/>
+      <text x="318" y="96" class="lbl-out">OUTPUT  payload["spu"]</text>
+    </svg>
+    <dl style="margin-top:18pt">
+      <dt>Repository</dt><dd><a href="https://github.com/Porlager/spu-cira-attendance">github.com/Porlager/spu-cira-attendance</a></dd>
+      <dt>เวอร์ชันเอกสาร</dt><dd>19 ตุลาคม 2026 · ใช้กับ branch <code>main</code></dd>
+      <dt>สถานะ</dt><dd>API และโค้ด Python+ ทดสอบแล้วด้วยข้อมูลสังเคราะห์และตัวจำลอง ยังไม่ได้ตรวจรับบน CiRA CORE จริง</dd>
+    </dl>
+  </div>
+</div>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="page">
+  <h2>สรุปสั้นสำหรับคนรีบ</h2>
+  <ol class="steps">
+    <li><strong>ติดตั้งเว็บบนเครื่องเดียวกับ CiRA CORE (รุ่น desktop)</strong> แล้วรัน <code>python app.py</code> เปิด <code>http://127.0.0.1:5050</code></li>
+    <li><strong>ลงทะเบียนใบหน้า</strong> ผู้ร่วมทดลองที่ยินยอม แล้ว <strong>เปิดคาบ</strong> ในหน้า "ห้องเรียน" (ไม่เปิดคาบ = ข้อมูลถูกปฏิเสธ)</li>
+    <li><strong>ดู Debug ของ DeepDetect</strong> จดชื่อคลาสที่โมเดลส่งออกมา</li>
+    <li><strong>หน้า "ตั้งค่า CiRA"</strong> จับคู่ชื่อคลาสกับพฤติกรรม (รูปแบบกรอบตั้งตามเอกสาร CiRA ไว้แล้ว)</li>
+    <li><strong>วาง Python+ node ต่อจาก DeepDetect</strong> ใส่โค้ดจาก <code>integrations/cira_python_plus.py</code> แก้บรรทัด <code>REPO</code> บรรทัดเดียว</li>
+    <li><strong>ตรวจผล</strong> หน้า "ห้องเรียน" ต้องมีกรอบทับคนพอดีและแถบบนเป็นจุดเขียว ส่วน Debug ใน CiRA ต้องเห็น <code>payload.spu.status = "ok"</code></li>
+  </ol>
+
+  <h3>INPUT กับ OUTPUT คืออะไรในงานนี้</h3>
+  <table>
+    <thead><tr><th style="width:22%">ทิศทาง</th><th>ข้อมูล</th><th style="width:30%">ช่องทาง</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag in">INPUT</span> CiRA → เว็บ</td><td>ผล DeepDetect ต่อเฟรม (ชื่อคลาส, confidence, กรอบ) + ภาพเฟรมเดียวกัน (ไม่บังคับ)</td><td>Python+ → <code>POST /api/cira/frame</code></td></tr>
+      <tr><td><span class="tag in">INPUT</span> CiRA → เว็บ</td><td>ผลของ function อื่น เช่น DeepClassif ไว้ดูโครงสร้าง (ไม่นำไปคำนวณ)</td><td><code>POST /api/cira/output</code></td></tr>
+      <tr><td><span class="tag out">OUTPUT</span> เว็บ → flow</td><td>ผลสรุปเฟรมล่าสุดใส่กลับใน payload: จำนวนคน, % ตั้งใจ, หลับ, ใครถูกจำได้และทำอะไรอยู่</td><td><code>payload["spu"]</code> ให้ node ถัดไปใช้</td></tr>
+      <tr><td><span class="tag out">OUTPUT</span> เว็บ → CiRA</td><td>สรุปทั้งห้องช่วง 10 วินาที + รายชื่อพร้อมสถานะ (ใช้ทำแจ้งเตือนได้)</td><td><code>GET /api/live</code></td></tr>
+      <tr><td><span class="tag out">OUTPUT</span> เว็บ → คน</td><td>หน้าห้องเรียนสด, รายงานรายนาที/รายคน, ไฟล์ CSV</td><td>หน้าเว็บ / <code>GET /api/sessions/&lt;id&gt;/export</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="note warn">
+    <p><strong>ต้องรันบนเครื่องเดียวกัน</strong> เว็บรับเฉพาะ <code>127.0.0.1</code> / <code>localhost</code> ถ้า CiRA อยู่อีกเครื่อง ให้ย้ายเว็บไปไว้เครื่อง CiRA อย่าเปลี่ยนเป็น <code>0.0.0.0</code> เพราะยังไม่มีระบบล็อกอินและ HTTPS</p>
+    <p><strong>ต้องใช้ CiRA CORE รุ่น desktop</strong> รุ่น browser (ciracore.cira-ai.com) ไม่มี Python+ และ REST node</p>
+  </div>
+
+  <h3>สารบัญ</h3>
+  <ol class="toc small">
+    <li>ติดตั้งและเตรียมเว็บ</li>
+    <li>อ่าน Debug ของ DeepDetect</li>
+    <li>ตั้งค่าให้ตรงกับโมเดล</li>
+    <li>INPUT + OUTPUT ด้วย Python+ node</li>
+    <li>สัญญา HTTP (ไม่ใช้ Python+)</li>
+    <li>OUTPUT: อ่านผลกลับ</li>
+    <li>ข้อผิดพลาดที่พบบ่อย</li>
+    <li>ขั้นตอนทดสอบและตรวจรับ</li>
+    <li>ข้อห้ามด้านความปลอดภัย</li>
+    <li>ภาคผนวก: endpoint และแหล่งอ้างอิง</li>
+  </ol>
+</section>
+
+<!-- ============ 1 SETUP ============ -->
+<section class="page">
+  <h2>1. ติดตั้งและเตรียมเว็บ</h2>
+  <p>ต้องใช้ Python 3.9–3.12 บนเครื่องที่รัน CiRA CORE (เว็บใช้ Python ของตัวเอง แยกจาก Python ที่ CiRA ใช้)</p>
+<pre><code>git clone https://github.com/Porlager/spu-cira-attendance.git
+cd spu-cira-attendance
+python3 -m venv .venv
+source .venv/bin/activate          <span class="c"># Windows: .venv\Scripts\activate</span>
+pip install -r requirements.txt
+python app.py                      <span class="c"># เปิด http://127.0.0.1:5050</span></code></pre>
+  <ul>
+    <li>ครั้งแรกระบบสร้างโฟลเดอร์ <code>data/</code> พร้อม <code>data/api-token.txt</code> (API key) และฐานข้อมูล <code>data/attendance.sqlite3</code></li>
+    <li>เปลี่ยน port ด้วย <code>PORT=5051 python app.py</code> เก็บข้อมูลที่อื่นด้วย <code>SPU_DATA_DIR=/path python app.py</code></li>
+    <li>path เต็มของไฟล์ API key ดูได้ในหน้า "ตั้งค่า CiRA" หัวข้อ "การเชื่อมต่อ"</li>
+  </ul>
+
+  <h3>เตรียมก่อนส่งข้อมูล</h3>
+  <ol>
+    <li>หน้า <strong>ลงทะเบียนใบหน้า</strong>: ถ่าย 3–8 ภาพต่อคน ติ๊กยินยอม แล้วบันทึก (เฉพาะคนที่ยินยอม)</li>
+    <li>หน้า <strong>ห้องเรียน</strong>: ใส่ชื่อคาบ เช่น <code>CPE447 · ห้อง 11-501</code> แล้วกด "เปิดคาบเรียน"</li>
+    <li>เปิดได้ครั้งละหนึ่งคาบ ปิดด้วยปุ่ม "ปิดคาบ" มุมขวาบน หลังปิดแล้ว CiRA ส่งเข้าคาบเดิมไม่ได้</li>
+  </ol>
+
+  <h3>ทดลองก่อนมีโมเดล (ไม่บังคับ)</h3>
+  <p>ใช้ตัวจำลองดูว่าหน้าเว็บทำงานอย่างไร ระบบเปิด "คาบจำลอง" แยกให้และติดป้าย <strong>ข้อมูลจำลอง</strong> ทุกจุด ตัวจำลองส่งกรอบรูปแบบเดียวกับ DeepDetect จริง</p>
+<pre><code>python integrations/simulate_cira.py --seconds 120 --with-identities</code></pre>
+  <p class="muted small">ตัวจำลองไม่ทำงานถ้ามีคาบจริงเปิดอยู่ และเว็บไม่รับข้อมูลจำลองเข้าคาบจริง ตัวเลขจากตัวจำลองเป็นค่าสุ่ม ห้ามใช้เป็นผลทดลอง</p>
+</section>
+
+<!-- ============ 2 DEBUG ============ -->
+<section class="page">
+  <h2>2. อ่าน Debug ของ DeepDetect</h2>
+  <p>ต่อ Debug node หลัง DeepDetect แล้วดูโครงสร้างจริงของรุ่นที่ติดตั้ง ตามเอกสาร CiRA CORE 2025 (JavaScript Update หน้า 27–28) ผล DeepDetect หน้าตาประมาณนี้:</p>
+<pre><code>{
+  "DeepDetect": {
+    "count": 2,
+    "counts": {"awake": 1, "sleep": 1},
+    "im_w": 1280, "im_h": 720,
+    "objects": [
+      {"id": 0, "name": "awake", "confidence": 0.91, "x": 290, "y": 390, "w": 180, "h": 260},
+      {"id": 1, "name": "sleep", "confidence": 0.84, "x": 650, "y": 390, "w": 180, "h": 260}
+    ]
+  }
+}</code></pre>
+  <p class="muted small">ตัวอย่างนี้เขียนขึ้นตามรูปแบบในเอกสาร ตัวเลขไม่ใช่ผลจากโมเดลจริง</p>
+  <table>
+    <thead><tr><th style="width:26%">field</th><th>ตามเอกสาร CiRA</th><th style="width:28%">สิ่งที่ต้องเช็คบนเครื่องจริง</th></tr></thead>
+    <tbody>
+      <tr><td><code>name</code></td><td>ชื่อคลาสที่ตั้งตอนเทรนโมเดล</td><td>จดทุกชื่อ ไปจับคู่ในหน้าตั้งค่า</td></tr>
+      <tr><td><code>x</code>, <code>y</code></td><td><strong>จุดกึ่งกลางกรอบ</strong> หน่วยพิกเซล</td><td>กรอบบนเว็บต้องทับคนพอดี</td></tr>
+      <tr><td><code>w</code>, <code>h</code></td><td>กว้าง/สูงของกรอบ พิกเซล</td><td>—</td></tr>
+      <tr><td><code>confidence</code></td><td>0–1 (บนจอแสดงเป็น % แต่ค่าใน payload เป็น 0–1)</td><td>ถ้าเห็นค่าเกิน 1 ให้ตั้งสเกล 0–100</td></tr>
+      <tr><td><code>im_w</code>, <code>im_h</code></td><td>ขนาดภาพที่ใช้ตรวจ เว็บใช้แปลงพิกัดให้อัตโนมัติ</td><td>ถ้าไม่มี ต้องแนบภาพหรือส่ง width/height</td></tr>
+      <tr><td>key <code>DeepDetect</code></td><td>บาง build ใช้ชื่ออื่น เช่น <code>DeepDetectCPU</code></td><td>ถ้ามี detector เดียว ระบบหาเอง ถ้ามีหลายตัวต้องระบุ</td></tr>
+    </tbody>
+  </table>
+  <figure>
+    <svg class="diagram" viewBox="0 0 640 150" role="img" aria-label="ความต่างระหว่าง x,y แบบจุดกึ่งกลางและแบบมุมซ้ายบน">
+      <rect x="10" y="10" width="300" height="130" rx="4" class="frame"/>
+      <rect x="110" y="40" width="90" height="70" class="bb"/>
+      <circle cx="155" cy="75" r="4" class="pt"/>
+      <text x="164" y="72" class="t">(x, y) = จุดกึ่งกลาง</text>
+      <text x="20" y="132" class="t-s">แบบ CiRA DeepDetect · ค่าเริ่มต้นของเว็บ</text>
+      <rect x="330" y="10" width="300" height="130" rx="4" class="frame"/>
+      <rect x="430" y="40" width="90" height="70" class="bb"/>
+      <circle cx="430" cy="40" r="4" class="pt"/>
+      <text x="438" y="34" class="t">(x, y) = มุมซ้ายบน</text>
+      <text x="340" y="132" class="t-s">ใช้เมื่อส่งจากเครื่องมืออื่นที่ใช้มุม</text>
+    </svg>
+  </figure>
+</section>
+
+<!-- ============ 3 SETTINGS ============ -->
+<section class="page">
+  <h2>3. ตั้งค่าให้ตรงกับโมเดล</h2>
+  <p>เปิดหน้า <strong>ตั้งค่า CiRA</strong> แก้แล้วกด "บันทึกการตั้งค่า" มีผลกับเฟรมถัดไปทันที ไม่ต้องรีสตาร์ท</p>
+  <figure>
+    <img src="img/settings.jpg" alt="หน้าตั้งค่า CiRA" style="max-height:105mm; width:auto; margin:0 auto">
+    <figcaption>หน้าตั้งค่า CiRA (ภาพจากเครื่องทดสอบ path ในเครื่องจริงจะต่างไป): ซ้ายคือการจับคู่คลาสและรูปแบบข้อมูล ขวาคือ endpoint, path ของ API key และผลล่าสุดที่ CiRA ส่งมา</figcaption>
+  </figure>
+  <h3>การจับคู่คลาส</h3>
+  <p>ใส่ชื่อคลาสให้ตรงกับ Debug (ตัวพิมพ์เล็ก/ใหญ่ไม่มีผล) แล้วเลือกว่าหมายถึงอะไร ชื่อที่ใส่ไว้ตอนนี้ (<code>awake</code>, <code>distracted</code>, <code>sleep</code>, <code>phone</code>, <code>person</code>) เป็นตัวอย่าง:</p>
+  <table>
+    <thead><tr><th style="width:26%">เลือก</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td>ตั้งใจเรียน</td><td>กรอบพฤติกรรมของคนหนึ่งคน นับเป็นตัวตั้งของ % ตั้งใจเรียน</td></tr>
+      <tr><td>ไม่ตั้งใจ</td><td>เช่น หันคุย มองที่อื่น</td></tr>
+      <tr><td>หลับ</td><td>นับในยอดหลับของทั้งห้อง และผูกกับชื่อถ้าจำหน้าได้</td></tr>
+      <tr><td>ใช้โทรศัพท์ (ทดลอง)</td><td>นับเฉพาะเมื่อเปิดสวิตช์ "ตรวจการใช้โทรศัพท์" ถ้าปิด กรอบนี้นับเป็นคนในภาพเท่านั้น</td></tr>
+      <tr><td>คน (นับจำนวนอย่างเดียว)</td><td>กรอบ person ทั่วไป ใช้นับจำนวนคน ไม่นับใน % ตั้งใจ</td></tr>
+      <tr><td>ไม่นับ</td><td>ข้ามคลาสนี้ เช่น <code>chair</code>, <code>book</code></td></tr>
+    </tbody>
+  </table>
+  <p>คลาสที่ CiRA ส่งมาแต่ยังไม่ได้จับคู่ จะขึ้นเป็นปุ่ม "+ ชื่อคลาส" ใต้ตาราง กดเพื่อเพิ่มได้ทันที ระหว่างนั้นระบบข้ามคลาสนั้นไปก่อน</p>
+  <div class="note">
+    <p><strong>สูตร:</strong> ตั้งใจเรียน (%) = ตั้งใจ ÷ (ตั้งใจ + ไม่ตั้งใจ + หลับ + ใช้โทรศัพท์ถ้าเปิด) · จำนวนคน = ค่ามากกว่าระหว่างจำนวนกรอบ "คน" กับจำนวนกรอบพฤติกรรม จึงใช้โมเดล person กับโมเดลพฤติกรรมพร้อมกันได้โดยไม่นับซ้ำ</p>
+  </div>
+  <h3>รูปแบบข้อมูลและพฤติกรรม</h3>
+  <table>
+    <thead><tr><th style="width:32%">ช่อง</th><th style="width:20%">ค่าเริ่มต้น</th><th>หมายเหตุ</th></tr></thead>
+    <tbody>
+      <tr><td>ตำแหน่ง x, y ของกรอบ</td><td>จุดกึ่งกลาง</td><td>ตรงกับ DeepDetect ถ้ากรอบเลื่อนไปซ้ายบนครึ่งกรอบ แปลว่าข้อมูลเป็นมุม ให้เลือก "มุมซ้ายบน"</td></tr>
+      <tr><td>หน่วยพิกัด</td><td>พิกเซล</td><td>ใช้ <code>im_w</code>/<code>im_h</code> ใน payload หรือภาพที่แนบมาแปลงให้</td></tr>
+      <tr><td>สเกล confidence</td><td>0–1</td><td>หรือ 0–100 ระบบหารให้เอง ห้ามหารซ้ำใน Python+</td></tr>
+      <tr><td>confidence ขั้นต่ำ</td><td>0.5</td><td>ต่ำกว่านี้ไม่นับ</td></tr>
+      <tr><td>ยืนยันสถานะรายคน (เฟรม)</td><td>3</td><td>ต้องเห็นพฤติกรรมเดิมติดกัน N เฟรมก่อนเปลี่ยนสถานะ กันกระพริบ</td></tr>
+      <tr><td>ตรวจการใช้โทรศัพท์</td><td>ปิด</td><td>กล้องหน้าห้องมักโดนบัง ทดลองแล้วค่อยตัดสินใจ</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 4 PYTHON+ ============ -->
+<section class="page">
+  <h2><span class="tag in">INPUT</span> <span class="tag out">OUTPUT</span> 4. Python+ node (แนะนำ)</h2>
+  <p>Python+ node ของ CiRA ใช้ฟังก์ชัน <code>handle_request(req)</code> ที่อ่านข้อมูลด้วย <code>getReqData(req)</code> และส่งต่อด้วย <code>makeRespData(payload, img)</code> (Intro 2025 หน้า 14) ไฟล์ <code>integrations/cira_python_plus.py</code> ใน repo เขียนตามแบบนั้นแล้ว:</p>
+<pre><code>import sys
+
+REPO = "/absolute/path/spu-cira-attendance"   <span class="c"># &lt;-- แก้บรรทัดนี้ให้ตรงกับเครื่อง</span>
+BASE_URL = "http://127.0.0.1:5050"
+SEND_IMAGE = True        <span class="c"># False = ส่งเฉพาะกรอบ (เช็คชื่อรายคนไม่ได้)</span>
+TIMEOUT = 2              <span class="c"># วินาที กัน flow ค้างถ้าเว็บไม่ตอบ</span>
+
+sys.path.append(REPO + "/integrations")
+from cira_bridge import error_message, flow_output, send_detections
+
+TOKEN_FILE = REPO + "/data/api-token.txt"
+_last = {"status": "waiting"}
+
+def handle_request(req):
+    global _last
+    payload, img = getReqData(req)
+    frame = img if SEND_IMAGE and getattr(img, "size", 0) else None
+    try:
+        result = send_detections(payload, TOKEN_FILE, frame_bgr=frame,      <span class="c"># INPUT</span>
+                                 base_url=BASE_URL, timeout=TIMEOUT)
+        if result is not None:
+            _last = dict(flow_output(result), status="ok")
+    except Exception as error:      <span class="c"># เว็บปิด/ยังไม่เปิดคาบ: flow ต้องเดินต่อ</span>
+        _last = {"status": "error", "error": error_message(error)}
+    payload["spu"] = _last                                                <span class="c"># OUTPUT</span>
+    return makeRespData(payload, img)</code></pre>
+  <h3>สิ่งที่โค้ดนี้ทำ</h3>
+  <ul>
+    <li><strong>INPUT:</strong> ส่ง payload ของ DeepDetect ทั้งก้อน + ภาพ <code>img</code> เข้าเว็บ ระบบหา <code>objects</code>, <code>im_w</code>, <code>im_h</code> เอง ย่อภาพเหลือกว้างไม่เกิน 1280 px</li>
+    <li><strong>ส่งจริงไม่เกิน 1 ครั้งต่อวินาที</strong> เฟรมที่เว้นไว้จะได้ผลล่าสุดซ้ำ จึงไม่ถ่วง flow ทุกเฟรม</li>
+    <li><strong>OUTPUT:</strong> ใส่ผลกลับใน <code>payload["spu"]</code> ให้ node ถัดไปใช้ (รายละเอียดหัวข้อ 6.1)</li>
+    <li><strong>ไม่ทำให้ flow หยุด</strong> ถ้าเว็บปิดหรือส่งไม่ผ่าน จะได้ <code>payload["spu"]["status"] = "error"</code> พร้อมเหตุผล</li>
+  </ul>
+  <div class="note warn">
+    <p><strong>ต้องเช็คบนเครื่องจริงก่อน (ยังไม่ได้ทดสอบกับ CiRA ตัวจริง):</strong></p>
+    <ul>
+      <li>ใส่ <code>print(type(img), getattr(img, "shape", None))</code> ชั่วคราว ภาพควรเป็น numpy BGR เช่น <code>(720, 1280, 3)</code> ถ้าติ๊ก "Not use image" ไว้ <code>img</code> อาจว่าง โค้ดจะส่งเฉพาะกรอบ</li>
+      <li>Python ที่ Python+ ใช้ (เลือกได้ด้วยปุ่ม Browse) ต้องมี <code>opencv</code> และ <code>numpy</code> ซึ่งปกติมีอยู่แล้ว bridge ใช้แค่ standard library นอกนั้น รองรับ Python 3.8 ขึ้นไป</li>
+      <li>ถ้ามี detector หลายตัวใน payload ให้ส่ง <code>function="ชื่อ key"</code> เพิ่มใน <code>send_detections(...)</code></li>
+    </ul>
+  </div>
+
+  <h3>ส่งผลของ function อื่นมาดู</h3>
+  <p>เช่น DeepClassif ส่งมาดูโครงสร้างในหน้าตั้งค่าได้ (ไม่นำไปคำนวณ เก็บในหน่วยความจำ ขนาดไม่เกิน 64 KB):</p>
+<pre><code>from cira_bridge import send_output
+send_output("DeepClassif", payload.get("DeepClassif"), TOKEN_FILE, timeout=2)</code></pre>
+
+  <h3>พารามิเตอร์ของ send_detections</h3>
+  <table>
+    <thead><tr><th style="width:22%">ชื่อ</th><th style="width:20%">ค่าเริ่มต้น</th><th>ใช้ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><code>objects</code></td><td>(ต้องมี)</td><td>payload ของ DeepDetect ทั้งก้อน, <code>{"objects": [...]}</code> หรือ list ของ objects</td></tr>
+      <tr><td><code>token_file</code></td><td>(ต้องมี)</td><td>path ของ <code>data/api-token.txt</code></td></tr>
+      <tr><td><code>frame_bgr</code></td><td><code>None</code></td><td>ภาพเฟรมเดียวกัน ใส่แล้วได้: เช็คชื่อด้วยใบหน้า, สรุปรายคน, เห็นภาพจริงบนเว็บ</td></tr>
+      <tr><td><code>width</code>, <code>height</code></td><td>จาก <code>im_w</code>/<code>im_h</code></td><td>ใส่เองเมื่อ payload ไม่มี <code>im_w</code>/<code>im_h</code> และไม่แนบภาพ</td></tr>
+      <tr><td><code>function</code></td><td><code>"DeepDetect"</code></td><td>key ใน payload และชื่อที่แสดงบนเว็บ</td></tr>
+      <tr><td><code>min_interval</code></td><td><code>1.0</code></td><td>ส่งจริงไม่ถี่กว่านี้ (วินาที)</td></tr>
+      <tr><td><code>timeout</code></td><td><code>10</code></td><td>ใน Python+ ใช้ 2 วินาทีพอ</td></tr>
+      <tr><td><code>base_url</code></td><td><code>http://127.0.0.1:5050</code></td><td>เปลี่ยนเมื่อใช้ port อื่น</td></tr>
+    </tbody>
+  </table>
+  <h3>กติกาภาพที่แนบ</h3>
+  <ul>
+    <li>ต้องเป็น <strong>เฟรมเดียวกับผลตรวจ</strong> ย่อได้ แต่ <strong>ห้าม crop</strong> ไม่อย่างนั้นกรอบจะไม่ตรงหน้า</li>
+    <li>ภาพเก็บในหน่วยความจำเฉพาะเฟรมล่าสุด ไม่เขียนลงดิสก์ ปิดคาบแล้วหายทันที</li>
+    <li>ระบบผูกใบหน้ากับกรอบพฤติกรรมที่ <strong>จุดกึ่งกลางใบหน้าอยู่ในกรอบ</strong> ถ้าซ้อนหลายกรอบเลือกกรอบเล็กสุด ถ้าสองคนอยู่ในกรอบเดียว ระบบจะไม่ผูกกับใคร</li>
+    <li>คนที่ฟุบหลับมักจำหน้าไม่ได้ จะอยู่ในยอดหลับของห้องแต่ไม่มีชื่อ เป็นพฤติกรรมที่ตั้งใจไว้</li>
+  </ul>
+</section>
+
+<!-- ============ 5 HTTP ============ -->
+<section class="page">
+  <h2><span class="tag in">INPUT</span> 5. สัญญา HTTP (กรณีไม่ใช้ Python+)</h2>
+  <p>ใช้เมื่อส่งจากเครื่องมืออื่น ต้องมี header <code>X-API-Key</code> ที่อ่านจากไฟล์ทุกครั้ง <strong>ห้ามพิมพ์คีย์ลงใน flow</strong> รับทั้ง <code>POST</code> และ <code>PUT</code> และรับได้สองรูปแบบ:</p>
+  <h4>แบบที่ 1: payload ของ CiRA ทั้งก้อน</h4>
+<pre><code>POST http://127.0.0.1:5050/api/cira/frame
+Content-Type: application/json
+X-API-Key: &lt;อ่านจาก data/api-token.txt&gt;
+
+{"DeepDetect": {"im_w": 1280, "im_h": 720,
+                "objects": [{"name": "sleep", "confidence": 0.82, "x": 140, "y": 165, "w": 80, "h": 90}]},
+ "image": "&lt;base64 JPEG/PNG ไม่บังคับ&gt;"}</code></pre>
+  <p class="small muted">ห่อเป็น <code>{"payload": {...}}</code> ก็ได้ ถ้ามี detector หลาย key ให้เพิ่ม <code>"function": "ชื่อ key"</code></p>
+  <h4>แบบที่ 2: รายการกรอบที่จัดเอง</h4>
+<pre><code>{"function": "DeepDetect", "width": 1280, "height": 720,
+ "detections": [{"name": "sleep", "confidence": 0.82, "x": 140, "y": 165, "w": 80, "h": 90}]}</code></pre>
+  <table>
+    <thead><tr><th style="width:20%">field</th><th style="width:16%">ชนิด</th><th>กติกา</th></tr></thead>
+    <tbody>
+      <tr><td><code>objects</code> / <code>detections</code></td><td>list</td><td>ไม่เกิน 300 รายการ ส่ง <code>[]</code> ได้เมื่อไม่พบใคร</td></tr>
+      <tr><td><code>└ name</code></td><td>string</td><td>1–64 ตัวอักษร</td></tr>
+      <tr><td><code>└ confidence</code></td><td>number</td><td>0 ถึงสเกลที่ตั้งไว้ (1 หรือ 100)</td></tr>
+      <tr><td><code>└ x, y, w, h</code></td><td>number</td><td>w, h &gt; 0 กรอบที่ล้นภาพจะถูกตัดให้อยู่ในภาพ</td></tr>
+      <tr><td><code>width</code>, <code>height</code></td><td>integer</td><td>1–10000 ใช้ <code>im_w</code>/<code>im_h</code> แทนได้ ต้องมีอย่างใดอย่างหนึ่งเมื่อหน่วยเป็นพิกเซล</td></tr>
+      <tr><td><code>image</code></td><td>string</td><td>base64 หรือ data URL ไม่เกิน 3 MB ด้านยาวไม่เกิน 4096 px</td></tr>
+      <tr><td><code>session_id</code></td><td>integer</td><td>ไม่บังคับ ถ้าใส่ต้องเป็นคาบที่เปิดอยู่</td></tr>
+    </tbody>
+  </table>
+  <div class="note warn">
+    <p><strong>REST node ของ CiRA (RestPutJson):</strong> มีใน palette รุ่น desktop แต่ไม่พบเอกสารวิธีตั้ง URL และ header ถ้าใส่ header <code>X-API-Key</code> ไม่ได้ จะใช้ส่งเข้าเว็บนี้ไม่ได้ ให้ใช้ Python+ แทน · JavaScript node ไม่มีเอกสารเรื่องการเรียก HTTP จึงไม่แนะนำ</p>
+  </div>
+  <h3>ทางเดิม (ยังใช้ได้)</h3>
+  <ul>
+    <li><code>POST /api/cira/observations</code> <code>{"session_id": 1, "people_count": 12}</code> บันทึกจำนวนคนอย่างเดียว</li>
+    <li><code>POST /api/recognize</code> <code>{"session_id": 1, "image": "..."}</code> เช็คชื่อจากภาพอย่างเดียว ไม่ตรวจพฤติกรรม</li>
+  </ul>
+</section>
+
+<!-- ============ 6 OUTPUT ============ -->
+<section class="page">
+  <h2><span class="tag out">OUTPUT</span> 6. อ่านผลกลับจากเว็บ</h2>
+
+  <h3>6.1 ใน flow ของ CiRA: payload["spu"]</h3>
+  <p>หลัง Python+ node ทุกเฟรมจะมี <code>payload.spu</code> ต่อ Debug เพื่อดู หรือใช้ใน node ถัดไป:</p>
+<pre><code>"spu": {
+  "status": "ok", "seq": 41,
+  "people": 24, "attentive_pct": 79.2,
+  "sleeping": 3, "inattentive": 2, "phone": 0,
+  "students": {"67010001": "attentive", "67010007": "sleeping"},
+  "ignored_labels": []
+}</code></pre>
+  <table>
+    <thead><tr><th style="width:24%">field</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><code>status</code></td><td><code>ok</code> · <code>waiting</code> (ยังไม่ได้ส่งครั้งแรก) · <code>error</code> (ดู <code>error</code>)</td></tr>
+      <tr><td><code>people</code></td><td>จำนวนคนในเฟรมที่ส่งล่าสุด</td></tr>
+      <tr><td><code>attentive_pct</code></td><td>% ตั้งใจของเฟรมนั้น <code>null</code> ถ้าไม่มีกรอบพฤติกรรม</td></tr>
+      <tr><td><code>sleeping</code> / <code>inattentive</code> / <code>phone</code></td><td>จำนวนกรอบแต่ละพฤติกรรม (<code>phone</code> เป็น 0 เมื่อปิดฟีเจอร์)</td></tr>
+      <tr><td><code>students</code></td><td>รหัสนักศึกษาที่จำหน้าได้ในเฟรมนี้ → พฤติกรรมที่ผูกได้ (<code>null</code> = จำได้แต่ไม่อยู่ในกรอบใด)</td></tr>
+      <tr><td><code>ignored_labels</code></td><td>คลาสที่ยังไม่ได้จับคู่ ไปเพิ่มในหน้าตั้งค่า</td></tr>
+    </tbody>
+  </table>
+  <p>ตัวอย่างใช้ใน JavaScript node ถัดไป (ใช้ <code>payload</code> และ <code>print</code> ตามเอกสาร JavaScript Update 2025):</p>
+<pre><code>if (payload.spu &amp;&amp; payload.spu.status == "ok" &amp;&amp; payload.spu.sleeping &gt;= 3) {
+  print("มีคนหลับ " + payload.spu.sleeping + " คน");
+}</code></pre>
+  <p class="muted small">ตัวเลขในตัวอย่างเป็นข้อมูลสมมติ ค่าในหนึ่งเฟรมแกว่งได้ ถ้าจะทำแจ้งเตือนจริงใช้ค่าเฉลี่ยจากข้อ 6.2</p>
+
+  <h3>6.2 สรุปทั้งห้องแบบนิ่ง: GET /api/live</h3>
+<pre><code>from cira_bridge import get
+live = get("/api/live", TOKEN_FILE, timeout=2)   <span class="c"># เรียกไม่เกิน 1 ครั้ง/วินาที</span>
+k = live["kpi"]
+alert = (k["sleeping"] or 0) &gt;= 3                 <span class="c"># None เมื่อยังไม่มีข้อมูล</span>
+present = [r["id"] for r in live["roster"] if r["present"]]</code></pre>
+  <table>
+    <thead><tr><th style="width:30%">field</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><code>session</code></td><td>คาบที่เปิดอยู่ (<code>id</code>, <code>title</code>, <code>started_at</code>, <code>simulated</code>) หรือ <code>null</code></td></tr>
+      <tr><td><code>cira.status</code></td><td><code>live</code> (มีเฟรมใน 5 วิ) · <code>error</code> (ถูกปฏิเสธล่าสุด ดู <code>last_error</code>) · <code>connected</code> · <code>offline</code></td></tr>
+      <tr><td><code>kpi.registered / present</code></td><td>จำนวนที่ลงทะเบียน / เช็คชื่อแล้วในคาบนี้</td></tr>
+      <tr><td><code>kpi.attentive_pct</code></td><td>% ตั้งใจ รวมทุกเฟรมใน 10 วินาทีล่าสุด</td></tr>
+      <tr><td><code>kpi.sleeping / inattentive / people</code></td><td>ค่าเฉลี่ยต่อเฟรมใน 10 วินาที (<code>phone</code> เป็น <code>null</code> เมื่อปิด)</td></tr>
+      <tr><td><code>roster[]</code></td><td><code>id</code>, <code>name</code>, <code>present</code>, <code>seen_at</code>, <code>status</code>, <code>status_seconds</code>, <code>frames</code>, <code>shares</code></td></tr>
+      <tr><td><code>roster[].status</code></td><td><code>attentive</code> · <code>inattentive</code> · <code>sleeping</code> · <code>phone</code> · <code>unknown</code> (ยังไม่ยืนยัน) · <code>not_seen</code> (ไม่เห็นเกิน 20 วิ)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.3 Endpoint อื่นสำหรับ OUTPUT</h3>
+  <table>
+    <tbody>
+      <tr><td style="width:38%"><code>GET /api/status</code></td><td>คาบที่เปิด + สถานะการเชื่อมต่อ CiRA (เบา ใช้ตรวจว่าต่อติดไหม)</td></tr>
+      <tr><td><code>GET /api/sessions</code></td><td>รายการคาบทั้งหมด พร้อมจำนวนเฟรมและจำนวนคนที่มา</td></tr>
+      <tr><td><code>GET /api/sessions/&lt;id&gt;/report</code></td><td>สรุปคาบ ไทม์ไลน์รายนาที สัดส่วนพฤติกรรมรายคน</td></tr>
+      <tr><td><code>GET /api/sessions/&lt;id&gt;/export</code></td><td>ไฟล์ CSV (UTF-8 เปิดใน Excel ได้)</td></tr>
+    </tbody>
+  </table>
+  <p>ทุก endpoint ต้องมี header <code>X-API-Key</code> และเรียกได้จากเครื่องเดียวกันเท่านั้น</p>
+</section>
+
+<!-- ============ 7 ERRORS ============ -->
+<section class="page">
+  <h2>7. ข้อผิดพลาดที่พบบ่อย</h2>
+  <p>เว็บตอบ HTTP 400 พร้อม <code>{"error": "..."}</code> ภาษาไทย ข้อความเดียวกันจะอยู่ใน <code>payload.spu.error</code> และแถบบนของหน้าเว็บจะขึ้นจุดแดง</p>
+  <table>
+    <thead><tr><th style="width:46%">ข้อความ</th><th>แปลว่า / วิธีแก้</th></tr></thead>
+    <tbody>
+      <tr><td><code>Connection refused</code> / <code>timed out</code></td><td>เว็บไม่ได้รันอยู่ หรือ port ไม่ตรง รัน <code>python app.py</code> แล้วตรวจ <code>BASE_URL</code></td></tr>
+      <tr><td><code>HTTP 401: API key required</code></td><td>คีย์ไม่ตรง ตรวจ <code>REPO</code> ว่าชี้ไปที่ repo ที่รันเว็บอยู่ (ถ้าลบโฟลเดอร์ data คีย์จะเปลี่ยน)</td></tr>
+      <tr><td><code>HTTP 403: Localhost only</code></td><td>เรียกผ่าน IP เครื่อง ใช้ <code>127.0.0.1</code> หรือ <code>localhost</code> เท่านั้น</td></tr>
+      <tr><td><code>ยังไม่มีคาบเรียนที่เปิดอยู่ เปิดคาบในหน้าเว็บก่อน</code></td><td>เปิดคาบในหน้าห้องเรียน</td></tr>
+      <tr><td><code>คาบเรียนไม่ตรงกับคาบที่กำลังเปิดอยู่</code></td><td>ส่ง <code>session_id</code> เก่า เอาออก</td></tr>
+      <tr><td><code>ไม่พบผลตรวจจับ ต้องมี detections หรือ payload ที่มี &lt;ชื่อ node&gt;.objects ...</code></td><td>payload ไม่มี objects หรือมี detector หลายตัว ระบุ <code>function</code></td></tr>
+      <tr><td><code>ต้องส่ง width และ height (พิกเซล) ของภาพที่ใช้ตรวจจับ</code></td><td>payload ไม่มี <code>im_w</code>/<code>im_h</code> แนบภาพ หรือส่ง width/height</td></tr>
+      <tr><td><code>confidence ต้องอยู่ระหว่าง 0–1 ตรวจการตั้งค่า confidence scale</code></td><td>CiRA ส่ง 0–100 ไปตั้ง "สเกล confidence" เป็น 0–100</td></tr>
+      <tr><td><code>confidence, x, y, w, h ต้องเป็นตัวเลข</code></td><td>บางรุ่นส่งเป็นข้อความ แปลงเป็น float ก่อนส่ง</td></tr>
+      <tr><td><code>w และ h ต้องมากกว่า 0</code></td><td>กรอบขนาดศูนย์ กรองทิ้งก่อนส่ง</td></tr>
+      <tr><td><code>คาบนี้เป็นคาบจำลอง รับเฉพาะข้อมูลจำลอง</code></td><td>ตัวจำลองเปิดคาบค้างไว้ ปิดคาบนั้นแล้วเปิดคาบจริง</td></tr>
+      <tr><td><code>ภาพไม่ถูกต้องหรือใหญ่เกิน 3 MB</code></td><td>ภาพใหญ่หรือ encode ผิด ใช้ <code>frame_bgr=</code> ของ bridge ซึ่งย่อและ encode ให้</td></tr>
+      <tr><td><code>Expected payload.DeepDetect.objects ...</code> (จาก bridge)</td><td>payload ไม่ใช่รูปแบบที่คาด <code>print(payload)</code> ดูโครงสร้างจริง</td></tr>
+    </tbody>
+  </table>
+
+  <h3>อาการที่ไม่มี error แต่ผลไม่ถูก</h3>
+  <table>
+    <tbody>
+      <tr><td style="width:46%">กรอบเลื่อนไปซ้ายบนครึ่งกรอบ</td><td>ข้อมูลเป็นแบบมุม เลือก "มุมซ้ายบน"</td></tr>
+      <tr><td>กรอบเลื่อนไปขวาล่างครึ่งกรอบ</td><td>ข้อมูลเป็นจุดกึ่งกลาง เลือก "จุดกึ่งกลาง"</td></tr>
+      <tr><td>กรอบเล็กกระจุกมุมซ้ายบน</td><td>CiRA ส่งสัดส่วน 0–1 แต่ตั้งเป็นพิกเซล</td></tr>
+      <tr><td>กรอบใหญ่ล้นภาพ</td><td>width/height ที่ใช้ไม่ใช่ขนาดของภาพที่ตรวจ (เช่น ใช้ ROI)</td></tr>
+      <tr><td>ตัวเลขเป็น — ตลอด</td><td>ทุกคลาสยังไม่ได้จับคู่ ดูปุ่ม "+ คลาส" ในหน้าตั้งค่า</td></tr>
+      <tr><td>เข้าเรียน 0 แม้เห็นหน้า</td><td>ไม่ได้แนบภาพ หรือหน้าเล็ก/ไกลเกินไป หรือยังไม่ได้ลงทะเบียน</td></tr>
+      <tr><td>flow ช้าลงทุก 1 วินาที</td><td>รอเว็บตอบ ลด <code>TIMEOUT</code> หรือตั้ง <code>SEND_IMAGE = False</code> ชั่วคราวเพื่อดูว่าภาพเป็นสาเหตุไหม</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 8 TEST ============ -->
+<section>
+  <h2>8. ขั้นตอนทดสอบและตรวจรับ</h2>
+  <h3>ทดสอบจาก terminal ก่อนต่อ flow</h3>
+<pre><code><span class="c"># 1) ต่อถึงเว็บไหม (ดูผลในหน้าตั้งค่า "ผลลัพธ์ล่าสุดจาก CiRA")</span>
+python integrations/cira_bridge.py --ping
+
+<span class="c"># 2) ส่ง payload ที่คัดลอกจาก Debug มาเป็นไฟล์ (อย่า commit ไฟล์จากห้องจริง)</span>
+python integrations/cira_bridge.py payload.json
+
+<span class="c"># 3) ส่งพร้อมภาพเฟรมเดียวกัน</span>
+python integrations/cira_bridge.py payload.json --image frame.jpg</code></pre>
+
+  <h3>เกณฑ์ตรวจรับบน CiRA จริง</h3>
+  <ul class="check">
+    <li>Debug หลัง Python+ เห็น <code>payload.spu.status = "ok"</code></li>
+    <li><code>img</code> ใน Python+ เป็นภาพ BGR (ดูจาก <code>img.shape</code>)</li>
+    <li>ชื่อคลาสจับคู่ครบ ไม่มีปุ่ม "+ คลาส" ค้างในหน้าตั้งค่า</li>
+    <li>กรอบบนหน้าห้องเรียนทับคนในภาพพอดี</li>
+    <li>ภาพ 0 / 1 / หลายคน: จำนวนคนตรงกับที่ตานับ</li>
+    <li>นักศึกษาที่ลงทะเบียนหน้าตรง: ถูกเช็คชื่อ และมีพฤติกรรมในรายชื่อ</li>
+    <li>คนที่ไม่ลงทะเบียน: ไม่ถูกเช็คชื่อเป็นคนอื่น</li>
+    <li>ฟุบหลับ: ยอดหลับของห้องเพิ่ม (ไม่มีชื่อถือว่าถูกตามออกแบบ)</li>
+    <li>ก้มเขียนหนังสือ / หันคุย: จดว่าโมเดลแยกจากหลับได้หรือไม่</li>
+    <li>ปิดเว็บระหว่าง flow รัน: flow ต้องเดินต่อ และ <code>payload.spu.status = "error"</code></li>
+    <li>ส่งก่อนเปิดคาบหรือหลังปิดคาบ: ถูกปฏิเสธ และแถบบนแสดงเหตุผล</li>
+    <li>(ถ้าเปิด) ใช้โทรศัพท์จากมุมกล้องจริง: มองเห็นกี่ครั้งจากกี่ครั้ง เพื่อตัดสินใจว่าจะเก็บฟีเจอร์ไหม</li>
+  </ul>
+  <div class="note">
+    <p>บันทึกผลจริงลงรายงานโครงงาน ห้ามอ้างว่าเชื่อมสำเร็จจากการทดสอบ API หรือข้อมูลจำลองอย่างเดียว</p>
+  </div>
+</section>
+
+<!-- ============ 9 SECURITY ============ -->
+<section>
+  <h2>9. ข้อห้ามด้านความปลอดภัยและข้อมูลส่วนตัว</h2>
+  <div class="note danger">
+    <ol>
+      <li><strong>ห้ามพิมพ์ API key ลงใน flow หรือโค้ด</strong> ให้อ่านจากไฟล์ทุกครั้ง flow ที่อัปโหลดขึ้น GitHub ต้องไม่มีคีย์</li>
+      <li><strong>ห้ามเปิดเว็บให้เครื่องอื่นเข้าถึง</strong> (ห้ามเปลี่ยน host เป็น <code>0.0.0.0</code>) เพราะยังไม่มีระบบล็อกอินและ HTTPS</li>
+      <li><strong>ห้าม commit</strong> โฟลเดอร์ <code>data/</code>, ภาพ, payload หรือ CSV จากห้องเรียนจริง repo นี้เป็น public</li>
+      <li><strong>ลงทะเบียนเฉพาะคนที่ยินยอม</strong> และลบข้อมูลได้เมื่อขอ (หน้า "นักศึกษา" ปุ่มลบ)</li>
+      <li><strong>ผลพฤติกรรมเป็นการประเมินของโมเดล</strong> ห้ามใช้ตัดคะแนนหรือลงโทษ แจ้งนักศึกษาก่อนทดลอง</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ APPENDIX ============ -->
+<section class="page">
+  <h2>ภาคผนวก: สรุป endpoint</h2>
+  <p class="muted small">ทุกเส้นทางใต้ <code>/api/</code> ต้องมี <code>X-API-Key</code> · base URL <code>http://127.0.0.1:5050</code></p>
+  <table>
+    <thead><tr><th style="width:12%">ทิศ</th><th style="width:40%">endpoint</th><th>ใช้ทำอะไร</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag in">IN</span></td><td><code>POST</code> / <code>PUT /api/cira/frame</code></td><td>ผล DeepDetect + ภาพ → เช็คชื่อ, พฤติกรรม, ภาพสด</td></tr>
+      <tr><td><span class="tag in">IN</span></td><td><code>POST /api/cira/output</code></td><td>ผล function อื่นไว้ดูโครงสร้าง (หน่วยความจำ ≤ 64 KB)</td></tr>
+      <tr><td><span class="tag in">IN</span></td><td><code>POST /api/cira/observations</code></td><td>ทางเดิม: จำนวนคนอย่างเดียว</td></tr>
+      <tr><td><span class="tag in">IN</span></td><td><code>POST /api/recognize</code></td><td>ทางเดิม: เช็คชื่อจากภาพอย่างเดียว</td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td>คำตอบของ <code>/api/cira/frame</code></td><td>ผลเฟรมนั้น → <code>payload["spu"]</code></td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/live</code></td><td>KPI 10 วินาที, รายชื่อพร้อมสถานะ, เฟรมล่าสุด</td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/live/frame</code></td><td>ภาพ JPEG เฟรมล่าสุด (404 ถ้าไม่มี)</td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/status</code></td><td>คาบที่เปิด + สถานะ CiRA</td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/sessions/&lt;id&gt;/report</code> · <code>/export</code></td><td>สรุปคาบ ไทม์ไลน์ รายคน · CSV</td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/cira/outputs</code></td><td>ผลล่าสุดของแต่ละ function</td></tr>
+      <tr><td>ตั้งค่า</td><td><code>GET</code> / <code>PUT /api/settings</code></td><td>การจับคู่คลาสและรูปแบบข้อมูล (ปกติแก้ผ่านหน้าเว็บ)</td></tr>
+    </tbody>
+  </table>
+  <h3>ไฟล์ที่เกี่ยวข้องใน repo</h3>
+  <table>
+    <tbody>
+      <tr><td style="width:40%"><code>integrations/cira_python_plus.py</code></td><td>โค้ดวางใน Python+ node (INPUT + OUTPUT)</td></tr>
+      <tr><td><code>integrations/cira_bridge.py</code></td><td><code>send_detections</code>, <code>flow_output</code>, <code>send_output</code>, <code>get</code> และ CLI</td></tr>
+      <tr><td><code>integrations/simulate_cira.py</code></td><td>ตัวส่งข้อมูลจำลอง</td></tr>
+      <tr><td><code>behavior.py</code></td><td>กติกาแปลงคลาส normalize กรอบ จับคู่ใบหน้า กันกระพริบ</td></tr>
+      <tr><td><code>docs/WEB_PREVIEW.pdf</code></td><td>ภาพตัวอย่างทุกหน้าเว็บ</td></tr>
+    </tbody>
+  </table>
+  <h3>แหล่งอ้างอิง</h3>
+  <ul class="small">
+    <li>CiRA CORE JavaScript Update 2025 หน้า 7–29 (payload, DeepDetect fields): archive.cira-ai.com/other/CiRA_CORE_AYC_2025_Share/</li>
+    <li>CiRA CORE Intro AYC 2025 หน้า 9–14 (node palette, Python+ template): โฟลเดอร์เดียวกัน</li>
+    <li>CiRA CORE ตอนที่ 24 แนะนำการใช้ Python+ (YouTube) และ github.com/CiRA-AMI/cira-core-python-plus-example</li>
+  </ul>
+  <p class="muted small">ส่วนที่เอกสารไม่ได้ระบุ (ชนิดของ <code>img</code>, การตั้งค่า RestPutJson) ต้องตรวจบนเครื่องจริงตามหัวข้อ 4 และ 8</p>
+</section>
+
+</body>
+</html>

@@ -108,7 +108,7 @@ input[type="text"], input[type="search"], input[type="number"], select {
   background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs);
 }
 .page-actions input[type="search"] { width: 220px; }
-.page-actions select { width: auto; max-width: 340px; }
+.page-actions select { width: auto; max-width: 440px; }
 input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 input[type="checkbox"] { width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--accent); flex: none; }
 .field { display: grid; gap: 6px; font-size: var(--fs-sm); color: var(--text-2); }
@@ -223,7 +223,7 @@ td.actions { text-align: right; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: var(--fs-sm); }
 .facts dt { color: var(--text-3); }
 .facts dd { margin: 0; min-width: 0; }
-.code { margin: 12px 0 0; padding: 12px; overflow: auto; max-height: 320px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font: 12px/1.55 var(--font-mono); color: var(--text); white-space: pre; }
+.code { margin: 12px 0 0; padding: 12px; overflow: auto; max-height: 320px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font: 12px/1.55 var(--font-mono); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
 .output-head { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-sm); }
 .output-head .muted { font-size: var(--fs-xs); }
 .output .code { margin-top: 6px; max-height: 220px; }
@@ -248,4 +248,5 @@ td.actions { text-align: right; }
   .grid-2 { grid-template-columns: minmax(0, 1fr); }
   .inline-form { flex-direction: column; }
   .sharebar { width: 80px; }
+  td, th { white-space: nowrap; }
 }

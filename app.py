@@ -309,7 +309,18 @@ def create_app(data_dir=None, vision=None):
         source = data.get("source", "cira")
         if source not in ("cira", "simulator"):
             raise ValueError("source ต้องเป็น cira หรือ simulator")
-        function = function_name(data.get("function", "DeepDetect"))
+        width, height = data.get("width"), data.get("height")
+        if "detections" in data:
+            function, items = function_name(data.get("function", "DeepDetect")), data["detections"]
+        else:
+            # Raw CiRA payload, e.g. forwarded as-is from a Python+ node or a REST node.
+            found = bh.unwrap_cira_payload(data, data.get("function"))
+            if not found:
+                raise ValueError("ไม่พบผลตรวจจับ ต้องมี detections หรือ payload ที่มี <ชื่อ node>.objects เช่น DeepDetect.objects")
+            function, items, im_w, im_h = found
+            function = function_name(function)
+            width = width if width is not None else im_w
+            height = height if height is not None else im_h
         simulated = source == "simulator"
         con = db()
         try:
@@ -325,8 +336,7 @@ def create_app(data_dir=None, vision=None):
             raise ValueError("คาบนี้เป็นคาบจำลอง รับเฉพาะข้อมูลจำลอง" if session["simulated"]
                              else "คาบจริงไม่รับข้อมูลจำลอง ให้ปิดคาบแล้วเปิดคาบจำลองแยก")
         image = data.get("image")
-        width, height = data.get("width"), data.get("height")
-        detections, unmapped = bh.parse_detections(data.get("detections"), settings, width, height,
+        detections, unmapped = bh.parse_detections(items, settings, width, height,
                                                    allow_student_id=simulated and image is None)
         faces, decoded = [], None
         if image is not None:
@@ -398,7 +408,7 @@ def create_app(data_dir=None, vision=None):
         while len(live["outputs"]) > 20:
             live["outputs"].pop(next(iter(live["outputs"])))
 
-    @app.post("/api/cira/frame")
+    @app.route("/api/cira/frame", methods=["POST", "PUT"])
     def cira_frame():
         with lock:
             live["last_contact"] = time.time()

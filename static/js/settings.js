@@ -57,22 +57,20 @@
   }
 
   function example(data) {
+    const repo = data.integrations_dir.replace(/\/integrations$/, '');
     return [
-      '# ใน Python node ของ CiRA CORE',
-      'import sys',
-      'sys.path.append(' + JSON.stringify(data.integrations_dir) + ')',
-      'from cira_bridge import send_detections',
+      '# Python+ node ต่อจาก DeepDetect: วางทั้งไฟล์ integrations/cira_python_plus.py',
+      '# แล้วแก้บรรทัดนี้ให้ตรงกับเครื่อง',
+      'REPO = ' + JSON.stringify(repo),
       '',
-      '# payload = ผลจาก DeepDetect  เช่น {"DeepDetect": {"objects": [...]}}',
-      '# frame   = ภาพ BGR เฟรมเดียวกัน ไม่ crop (ไม่ใส่ก็ได้ แต่จะเช็คชื่อรายคนไม่ได้)',
-      'send_detections(payload,',
-      '                token_file=' + JSON.stringify(data.token_file) + ',',
-      '                frame_bgr=frame)',
+      '# INPUT : ส่งผล DeepDetect + ภาพเฟรมเดียวกันเข้าเว็บ (ไม่เกิน 1 ครั้ง/วินาที)',
+      '# OUTPUT: ได้ payload["spu"] กลับเข้า flow เช่น',
+      '#   {"status": "ok", "people": 24, "attentive_pct": 81.2,',
+      '#    "sleeping": 2, "students": {"67010001": "attentive"}}',
       '',
       '# หรือ HTTP POST ' + data.endpoint,
-      '# {"function": "DeepDetect", "width": 1280, "height": 720,',
-      '#  "detections": [{"name": "sleep", "confidence": 0.82,',
-      '#                  "x": 100, "y": 120, "w": 80, "h": 90}]}',
+      '# ส่ง payload ของ DeepDetect ทั้งก้อนได้เลย {"DeepDetect": {...}}',
+      '# พร้อม header X-API-Key ที่อ่านจาก ' + data.token_file,
     ].join('\n');
   }
 

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ภาพตัวอย่างหน้าเว็บ SPU Classroom</title>
+<link rel="stylesheet" href="print.css">
+<style>
+  .shot { break-before: page; }
+  .shot h2 { margin-bottom: 4pt; }
+  .shot .lead { font-size: 10pt; margin-bottom: 8pt; }
+  .shot ul { margin-bottom: 10pt; }
+  .shot img { margin-top: 4pt; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; }
+  .pair figure { margin: 0; }
+  .phone { height: 196mm; overflow: hidden; border: 0.6pt solid var(--border); border-radius: 10pt; }
+  .phone img { border: 0; border-radius: 0; }
+  .half img { max-height: 100mm; width: auto; max-width: 100%; }
+  .toc-list { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24pt; font-size: 10pt; }
+  .toc-list li { padding: 3pt 0; border-bottom: 0.6pt solid var(--border); break-inside: avoid; }
+  .toc-list span { color: var(--text-3); margin-right: 6pt; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div>
+    <div class="eyebrow">SPU Classroom · CiRA CORE</div>
+    <h1>ภาพตัวอย่างหน้าเว็บ<br>ทุกหน้า</h1>
+    <p class="lead">เว็บเช็คชื่อด้วยใบหน้าและสรุปพฤติกรรมในห้องเรียน (ตั้งใจเรียน / หลับ) ที่รับข้อมูลจาก CiRA CORE</p>
+    <div class="note warn" style="margin-top:16pt; max-width:150mm">
+      <p><strong>ข้อมูลในภาพทั้งหมดเป็นข้อมูลจำลอง</strong> ชื่อและรหัสนักศึกษาเป็นชื่อสมมติ ตัวเลขพฤติกรรมมาจากตัวจำลอง (<code>simulate_cira.py</code>) และภาพสังเคราะห์ ไม่ใช่ผลจากห้องเรียนหรือโมเดลจริง</p>
+    </div>
+  </div>
+  <div>
+    <ol class="toc-list">
+      <li><span>1</span>ห้องเรียน ระหว่างคาบ</li>
+      <li><span>2</span>ห้องเรียน เมื่อ CiRA แนบภาพ</li>
+      <li><span>3</span>ก่อนเปิดคาบ และลงทะเบียนใบหน้า</li>
+      <li><span>4</span>นักศึกษา</li>
+      <li><span>5</span>รายงาน</li>
+      <li><span>6</span>ตั้งค่า CiRA</li>
+      <li><span>7</span>บนมือถือ</li>
+    </ol>
+    <dl style="margin-top:18pt">
+      <dt>Repository</dt><dd><a href="https://github.com/Porlager/spu-cira-attendance">github.com/Porlager/spu-cira-attendance</a></dd>
+      <dt>ถ่ายภาพเมื่อ</dt><dd>19 ตุลาคม 2026 · หน้าจอกว้าง 1440 px และมือถือ 390 px</dd>
+      <dt>ดีไซน์</dt><dd>ธีมสว่าง สีเน้นน้ำเงินสีเดียว ฟอนต์ระบบ ไม่ใช้ CDN</dd>
+    </dl>
+  </div>
+</div>
+
+<section class="shot">
+  <h2>1. ห้องเรียน ระหว่างคาบ</h2>
+  <p class="lead">หน้าแรกที่ผู้สอนเปิดค้างไว้ระหว่างคาบ อัปเดตทุก 1 วินาที</p>
+  <ul>
+    <li><strong>แถบบน:</strong> ชื่อคาบ เวลาเริ่ม ป้าย "ข้อมูลจำลอง" (เฉพาะคาบจำลอง) และสถานะ CiRA จุดเขียว = กำลังส่งข้อมูล จุดแดง = ถูกปฏิเสธพร้อมเหตุผล</li>
+    <li><strong>ตัวเลขสรุป:</strong> เข้าเรียน x/ทั้งหมด · % ตั้งใจเรียนเฉลี่ย 10 วินาที · จำนวนคนหลับ (รวมคนที่ระบุตัวไม่ได้) · คนในภาพ</li>
+    <li><strong>ภาพล่าสุดจาก CiRA:</strong> กรอบสีตามพฤติกรรม เขียว = ตั้งใจ, ส้ม = ไม่ตั้งใจ, แดง = หลับ สลับเป็น "กล้องเครื่องนี้" เพื่อเช็คชื่อด้วยเว็บแคมได้</li>
+    <li><strong>รายชื่อ:</strong> เวลาเช็คชื่อ สถานะปัจจุบันและนานเท่าไร % ตั้งใจของแต่ละคน กรองได้ ทั้งหมด / มาเรียน / ยังไม่พบ / หลับ</li>
+  </ul>
+  <img src="img/live.jpg" alt="หน้าห้องเรียนระหว่างคาบ">
+</section>
+
+<section class="shot">
+  <h2>2. ห้องเรียน เมื่อ CiRA แนบภาพ</h2>
+  <p class="lead">เมื่อ Python+ node ส่งภาพเฟรมเดียวกันมาด้วย เว็บจะแสดงภาพจริงและวาดกรอบทับ</p>
+  <ul>
+    <li>ภาพนี้ส่งด้วย payload ของ DeepDetect ทั้งก้อน (x,y เป็นจุดกึ่งกลาง พร้อม <code>im_w</code>/<code>im_h</code>) ผ่าน <code>cira_bridge.py</code> กรอบตรงกับคนในภาพ</li>
+    <li>ภาพเป็น <strong>ภาพสังเคราะห์</strong> สำหรับทดสอบการแสดงผล จึงไม่มีใบหน้าให้จำ เข้าเรียนเป็น 0</li>
+    <li>ภาพเก็บในหน่วยความจำเฉพาะเฟรมล่าสุด ไม่บันทึกลงดิสก์ ปิดคาบแล้วหายทันที</li>
+    <li>กรอบเส้นประสีน้ำเงิน (เมื่อมีใบหน้า) คือใบหน้าที่ระบบตรวจพบ ใช้ผูกพฤติกรรมเข้ากับชื่อนักศึกษา</li>
+  </ul>
+  <img src="img/live-image.jpg" alt="หน้าห้องเรียนเมื่อ CiRA แนบภาพ">
+</section>
+
+<section class="shot">
+  <h2>3. ก่อนเปิดคาบ และลงทะเบียนใบหน้า</h2>
+  <figure class="half">
+    <img src="img/live-empty.jpg" alt="หน้าห้องเรียนก่อนเปิดคาบ">
+    <figcaption>ก่อนเปิดคาบ: ใส่ชื่อคาบแล้วกดเปิด ข้อมูลจาก CiRA จะถูกปฏิเสธจนกว่าจะเปิดคาบ</figcaption>
+  </figure>
+  <figure class="half">
+    <img src="img/enroll.jpg" alt="หน้าลงทะเบียนใบหน้า">
+    <figcaption>ลงทะเบียนใบหน้า: เปิดกล้อง ถ่าย 3–8 ภาพ (ลบทีละภาพได้) กรอกรหัสและชื่อ ติ๊กยินยอม ปุ่มบันทึกจะกดได้เมื่อครบเงื่อนไขและบอกว่ายังขาดอะไร</figcaption>
+  </figure>
+</section>
+
+<section class="shot">
+  <h2>4. นักศึกษา</h2>
+  <p class="lead">รายชื่อที่ลงทะเบียน ค้นหาด้วยรหัสหรือชื่อ</p>
+  <ul>
+    <li>จำนวนภาพใบหน้าที่เก็บ และจำนวนคาบที่เข้าเรียน</li>
+    <li>ปุ่ม "ลบ" ลบภาพใบหน้า ประวัติเช็คชื่อ และพฤติกรรมของคนนั้นทุกคาบ (ถามยืนยันก่อน ย้อนคืนไม่ได้)</li>
+  </ul>
+  <img src="img/students.jpg" alt="หน้านักศึกษา">
+</section>
+
+<section class="shot">
+  <h2>5. รายงาน</h2>
+  <p class="lead">สรุปย้อนหลังรายคาบ เลือกคาบจากเมนูมุมขวาบน</p>
+  <ul>
+    <li><strong>ตัวเลขสรุป:</strong> เข้าเรียน · % ตั้งใจเฉลี่ยทั้งคาบ · หลับพร้อมกันสูงสุด · จำนวนเฟรมที่ได้รับ</li>
+    <li><strong>กราฟรายนาที:</strong> % ตั้งใจเรียน และจำนวนคนหลับเฉลี่ย (วาดเองด้วย SVG ไม่ใช้ไลบรารีภายนอก)</li>
+    <li><strong>รายบุคคล:</strong> แถบสัดส่วนพฤติกรรม นับจากเฟรมที่จับคู่ใบหน้ากับกรอบได้ ไม่ใช่นาทีจริง</li>
+    <li>ปุ่ม "ดาวน์โหลด CSV" ได้ไฟล์ที่เปิดใน Excel ได้ภาษาไทย</li>
+  </ul>
+  <img src="img/reports.jpg" alt="หน้ารายงาน">
+</section>
+
+<section class="shot">
+  <h2>6. ตั้งค่า CiRA</h2>
+  <p class="lead">ปรับให้ตรงกับโมเดลใน CiRA โดยไม่ต้องแก้โค้ด มีผลกับเฟรมถัดไปทันที</p>
+  <ul>
+    <li><strong>การจับคู่คลาส:</strong> ชื่อคลาสจาก DeepDetect → ตั้งใจ / ไม่ตั้งใจ / หลับ / ใช้โทรศัพท์ / คน / ไม่นับ คลาสที่ยังไม่จับคู่ขึ้นเป็นปุ่มให้กดเพิ่ม</li>
+    <li><strong>รูปแบบข้อมูล:</strong> ค่าเริ่มต้นตรงกับเอกสาร CiRA (x,y จุดกึ่งกลาง, พิกเซล, confidence 0–1)</li>
+    <li><strong>ตรวจการใช้โทรศัพท์:</strong> ปิดไว้เป็นค่าเริ่มต้น เพราะกล้องหน้าห้องมักมองไม่เห็น</li>
+    <li><strong>ขวา:</strong> endpoint, path ของไฟล์ API key (ไม่แสดงตัวคีย์), โค้ดตัวอย่าง และ payload ล่าสุดที่ CiRA ส่งมาแยกตาม function</li>
+  </ul>
+  <img src="img/settings.jpg" alt="หน้าตั้งค่า CiRA">
+</section>
+
+<section class="shot">
+  <h2>7. บนมือถือ</h2>
+  <p class="lead">เมนูย้ายขึ้นด้านบนและเลื่อนซ้ายขวาได้ ตัวเลขสรุปเรียงเป็น 2 คอลัมน์ ตารางเลื่อนแนวนอนได้</p>
+  <div class="pair">
+    <figure>
+      <div class="phone"><img src="img/live-mobile.jpg" alt="หน้าห้องเรียนบนมือถือ"></div>
+      <figcaption>ห้องเรียน (แสดงเฉพาะส่วนบน)</figcaption>
+    </figure>
+    <figure>
+      <div class="phone"><img src="img/reports-mobile.jpg" alt="หน้ารายงานบนมือถือ"></div>
+      <figcaption>รายงาน (แสดงเฉพาะส่วนบน)</figcaption>
+    </figure>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,29 +1,41 @@
-"""Call from a CiRA CORE Python node, or run from the command line.
+"""Call from a CiRA CORE Python+ node (see cira_python_plus.py), or run from the command line.
 The adapter accepts the documented DeepDetect payload; no CiRA SDK is assumed.
+Standard library only (cv2 is needed only when a frame is attached); works on Python 3.8+.
 """
 import argparse
 import base64
 import json
 import time
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 BASE_URL = "http://127.0.0.1:5050"
 _last_sent = {}
 
 
-def post(path, payload, token_file, base_url=BASE_URL):
+def post(path, payload, token_file, base_url=BASE_URL, timeout=10):
     token = Path(token_file).read_text().strip()
     req = Request(base_url + path, data=json.dumps(payload).encode(),
                   headers={"Content-Type": "application/json", "X-API-Key": token}, method="POST")
-    with urlopen(req, timeout=10) as response:
+    with urlopen(req, timeout=timeout) as response:
         return json.load(response)
 
 
-def get(path, token_file, base_url=BASE_URL):
+def get(path, token_file, base_url=BASE_URL, timeout=10):
     token = Path(token_file).read_text().strip()
-    with urlopen(Request(base_url + path, headers={"X-API-Key": token}), timeout=10) as response:
+    with urlopen(Request(base_url + path, headers={"X-API-Key": token}), timeout=timeout) as response:
         return json.load(response)
+
+
+def error_message(error):
+    """Readable reason for a failed call; the web app returns {"error": "..."} in Thai."""
+    if isinstance(error, HTTPError):
+        try:
+            return "HTTP %d: %s" % (error.code, json.loads(error.read() or b"{}").get("error", ""))
+        except ValueError:
+            return "HTTP %d" % error.code
+    return str(error)
 
 
 def send_deepdetect(payload, session_id, token_file, base_url=BASE_URL, person_label="person", min_confidence=0.5):
@@ -55,15 +67,28 @@ def send_frame(image_bgr, session_id, token_file, base_url=BASE_URL):
     return post("/api/recognize", {"session_id": session_id, "image": base64.b64encode(encoded).decode()}, token_file, base_url)
 
 
+def _detector(payload, function):
+    """(objects, im_w, im_h) from {"DeepDetect": {...}}, {"objects": [...]} or a bare list.
+    Falls back to the only key holding "objects" (e.g. DeepDetectCPU) when `function` is absent."""
+    if not isinstance(payload, dict):
+        return payload, None, None
+    if function in payload:
+        inner = payload[function]
+    elif isinstance(payload.get("objects"), list):
+        inner = payload
+    else:
+        keys = [k for k, v in payload.items() if isinstance(v, dict) and isinstance(v.get("objects"), list)]
+        inner = payload[keys[0]] if len(keys) == 1 else None
+    if not isinstance(inner, dict):
+        return None, None, None
+    return inner.get("objects"), inner.get("im_w"), inner.get("im_h")
+
+
 def extract_objects(payload, function="DeepDetect"):
     """Accept {"DeepDetect": {"objects": [...]}}, {"objects": [...]} or a bare list.
     Checks structure only. Confidence and boxes are NOT rescaled here; the web app's
     Settings page decides the confidence scale and box format in one place."""
-    if isinstance(payload, dict):
-        inner = payload.get(function, payload)
-        objects = inner.get("objects") if isinstance(inner, dict) else None
-    else:
-        objects = payload
+    objects = _detector(payload, function)[0]
     if not isinstance(objects, list):
         raise ValueError("Expected payload.%s.objects; inspect your CiRA Debug output first" % function)
     clean = []
@@ -88,11 +113,12 @@ def encode_frame(frame_bgr, max_width=1280):
 
 
 def send_detections(objects, token_file, session_id=None, width=None, height=None, frame_bgr=None,
-                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0):
+                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10):
     """Send one frame of CiRA results to /api/cira/frame.
 
     objects: a DeepDetect payload or a list of {name, confidence, x, y, w, h}.
-    width/height: size of the frame the boxes refer to. Taken from frame_bgr when given.
+    width/height: size of the frame the boxes refer to. Taken from frame_bgr when given,
+    otherwise from the payload's im_w/im_h when present.
     frame_bgr: optional same, uncropped frame; enables face check-in and per-student behavior.
     Returns the server response, or None when skipped by the min_interval throttle.
     """
@@ -100,6 +126,9 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
     if min_interval and now - _last_sent.get(function, float("-inf")) < min_interval:
         return None
     payload = {"function": function, "source": source, "detections": extract_objects(objects, function)}
+    _, im_w, im_h = _detector(objects, function)
+    if width is None and height is None and type(im_w) is int and type(im_h) is int:
+        width, height = im_w, im_h
     if session_id is not None:
         payload["session_id"] = session_id
     if frame_bgr is not None:
@@ -108,12 +137,21 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
     if width is not None and height is not None:
         payload["width"], payload["height"] = int(width), int(height)
     _last_sent[function] = now
-    return post("/api/cira/frame", payload, token_file, base_url)
+    return post("/api/cira/frame", payload, token_file, base_url, timeout)
 
 
-def send_output(function, output, token_file, base_url=BASE_URL):
-    """Show any other CiRA function result (DeepClassify, OCR, ...) on the Settings page. Memory only."""
-    return post("/api/cira/output", {"function": function, "output": output}, token_file, base_url)
+def flow_output(result):
+    """Compact web result to put back into the CiRA payload (e.g. payload["spu"]) for later nodes."""
+    return {"seq": result["seq"], "people": result["people"], "attentive_pct": result["attentive_pct"],
+            "sleeping": result["counts"]["sleeping"], "inattentive": result["counts"]["inattentive"],
+            "phone": result["counts"]["phone"],
+            "students": {f["student_id"]: f["behavior"] for f in result["faces"] if f["student_id"]},
+            "ignored_labels": result["ignored_labels"]}
+
+
+def send_output(function, output, token_file, base_url=BASE_URL, timeout=10):
+    """Show any other CiRA function result (DeepClassif, OCR, ...) on the Settings page. Memory only."""
+    return post("/api/cira/output", {"function": function, "output": output}, token_file, base_url, timeout)
 
 
 if __name__ == "__main__":

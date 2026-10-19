@@ -58,13 +58,13 @@ def test_settings_roundtrip_and_validation(tmp_path):
 
 def test_frame_box_normalization(client):
     start(client)
+    frame(client, [d('sleep', 128, 96, 128, 96)])  # default: x, y are the box center like CiRA DeepDetect
+    assert client.get('/api/live').json['frame']['detections'][0]['box'] == [0.1, 0.1, 0.3, 0.3]
+    put(client, box_origin='topleft')
     frame(client, [d('sleep', 64, 48, 128, 96)])
     assert client.get('/api/live').json['frame']['detections'][0]['box'] == [0.1, 0.1, 0.3, 0.3]
-    put(client, box_origin='center')
-    frame(client, [d('sleep', 128, 96, 128, 96)])
-    assert client.get('/api/live').json['frame']['detections'][0]['box'] == [0.1, 0.1, 0.3, 0.3]
     put(client, coord_units='normalized')
-    frame(client, [d('sleep', .2, .2, .2, .2)], width=None, height=None)
+    frame(client, [d('sleep', .1, .1, .2, .2)], width=None, height=None)
     assert client.get('/api/live').json['frame']['detections'][0]['box'] == [0.1, 0.1, 0.3, 0.3]
     put(client, coord_units='pixel')
     assert client.post('/api/cira/frame', json={'detections': [d('sleep')]}).status_code == 400
@@ -223,6 +223,51 @@ def test_migration_adds_simulated_column(tmp_path):
     assert make_client(tmp_path).get('/api/sessions').json['sessions'][0]['simulated'] == 0
 
 
+def test_raw_cira_payload_put_and_wrappers(client):
+    start(client)
+    obj = {'id': 2, 'name': 'sleep', 'confidence': 0.9, 'x': 128, 'y': 96, 'w': 128, 'h': 96}
+    raw = {'DeepDetect': {'count': 1, 'counts': {'sleep': 1}, 'im_w': 640, 'im_h': 480, 'objects': [obj]}}
+    result = client.post('/api/cira/frame', json=raw).json
+    assert result['counts']['sleeping'] == 1
+    assert client.get('/api/live').json['frame']['detections'][0]['box'] == [0.1, 0.1, 0.3, 0.3]
+    assert client.put('/api/cira/frame', json={'payload': raw}).status_code == 200
+    cpu = {'DeepDetectCPU': raw['DeepDetect']}
+    assert client.post('/api/cira/frame', json=cpu).status_code == 200
+    assert client.get('/api/live').json['frame']['function'] == 'DeepDetectCPU'
+    assert client.post('/api/cira/frame', json={'A': raw['DeepDetect'], 'B': raw['DeepDetect']}).status_code == 400
+    assert client.post('/api/cira/frame', json={'A': raw['DeepDetect'], 'B': raw['DeepDetect'], 'function': 'B'}).status_code == 200
+    assert client.post('/api/cira/frame', json={'hello': 1}).status_code == 400
+    no_size = {'DeepDetect': {'objects': [obj]}}
+    assert client.post('/api/cira/frame', json=no_size).status_code == 400
+
+
+def test_python_plus_node(monkeypatch):
+    import importlib.util
+    import sys
+    from urllib.error import HTTPError
+    monkeypatch.syspath_prepend('integrations')
+    spec = importlib.util.spec_from_file_location('cira_python_plus', 'integrations/cira_python_plus.py')
+    node = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(node)
+    node.getReqData = lambda req: req
+    node.makeRespData = lambda payload, img: (payload, img)
+    calls = []
+    answer = {'seq': 1, 'people': 2, 'attentive_pct': 50.0, 'counts': {'attentive': 1, 'inattentive': 0, 'sleeping': 1, 'phone': 0},
+              'faces': [{'student_id': '67000001', 'distance': 10, 'behavior': 'sleeping'}, {'student_id': None, 'distance': 90, 'behavior': None}],
+              'ignored_labels': []}
+    monkeypatch.setattr(node, 'send_detections', lambda payload, token, **kw: calls.append(kw) or answer)
+    payload, img = node.handle_request(({'DeepDetect': {'objects': []}}, None))
+    assert payload['spu']['status'] == 'ok' and payload['spu']['sleeping'] == 1
+    assert payload['spu']['students'] == {'67000001': 'sleeping'} and calls[0]['frame_bgr'] is None and calls[0]['timeout'] == 2
+    monkeypatch.setattr(node, 'send_detections', lambda *a, **kw: None)
+    assert node.handle_request(({}, None))[0]['spu']['seq'] == 1  # throttled frame reuses the last answer
+    def fail(*a, **kw):
+        raise HTTPError('u', 400, 'BAD', {}, io.BytesIO('{"error": "ยังไม่มีคาบ"}'.encode()))
+    monkeypatch.setattr(node, 'send_detections', fail)
+    assert node.handle_request(({}, None))[0]['spu'] == {'status': 'error', 'error': 'HTTP 400: ยังไม่มีคาบ'}
+    sys.modules.pop('cira_bridge', None)
+
+
 def test_bridge_send_detections(monkeypatch):
     import numpy as np
     import pytest
@@ -238,6 +283,9 @@ def test_bridge_send_detections(monkeypatch):
     cira_bridge.send_detections([obj], 'unused', frame_bgr=np.zeros((480, 640, 3), np.uint8), function='Other', min_interval=0)
     assert calls[1][1]['width'] == 640 and calls[1][1]['height'] == 480 and calls[1][1]['image']
     assert cira_bridge.extract_objects({'objects': [obj]}) == [obj]
+    sized = {'DeepDetectCPU': {'im_w': 1100, 'im_h': 825, 'objects': [obj]}}
+    cira_bridge.send_detections(sized, 'unused', function='Sized', min_interval=0)
+    assert calls[2][1]['width'] == 1100 and calls[2][1]['height'] == 825 and calls[2][1]['detections'] == [obj]
     assert cira_bridge.send_detections([], 'unused', function='Throttle', min_interval=60) is not None
     assert cira_bridge.send_detections([], 'unused', function='Throttle', min_interval=60) is None
     for bad in [{'DeepDetect': {}}, [{'name': 'x', 'confidence': '1', 'x': 0, 'y': 0, 'w': 1, 'h': 1}], [{'confidence': 1}]]:
@@ -263,4 +311,7 @@ def test_simulator_frames_are_valid(client):
             assert 0 <= o['x'] and o['x'] + o['w'] <= 1280 and 0 <= o['y'] and o['y'] + o['h'] <= 720
     assert {p['state'] for p in people} - {'attentive', 'inattentive', 'sleeping'} == set()
     start_sim(client)
+    payload = simulate_cira.make_frame(rng, people, labels, settings=bh.DEFAULT_SETTINGS)
+    o = payload['detections'][0]
+    assert o['x'] - o['w'] / 2 >= 0 and o['x'] + o['w'] / 2 <= 1280
     assert client.post('/api/cira/frame', json=payload).status_code == 200

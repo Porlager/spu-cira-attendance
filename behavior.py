@@ -10,7 +10,8 @@ DEFAULT_SETTINGS = {
     # Placeholder class names. Replace them with the labels your CiRA model really outputs.
     "label_map": {"person": "person", "awake": "attentive", "distracted": "inattentive",
                   "sleep": "sleeping", "phone": "phone"},
-    "box_origin": "topleft",      # topleft | center
+    # CiRA CORE 2025 docs: DeepDetect x, y are the box CENTER in pixels, confidence 0..1.
+    "box_origin": "center",       # center | topleft
     "coord_units": "pixel",       # pixel | normalized (0..1)
     "confidence_scale": 1,        # 1 when CiRA sends 0..1, 100 when it sends 0..100
     "min_confidence": 0.5,
@@ -80,6 +81,25 @@ def effective_behavior(label, settings):
     if target == "phone" and not settings["phone_enabled"]:  # optional: phone
         return "person"
     return target
+
+
+def unwrap_cira_payload(data, function=None):
+    """Find detector output in a raw CiRA payload.
+
+    Accepts {"DeepDetect": {"objects": [...], "im_w": 1280, "im_h": 720}}, the same wrapped
+    in {"payload": {...}}, or another detector key such as "DeepDetectCPU".
+    Returns (function, objects, im_w, im_h), or None when no single detector output is found.
+    """
+    if isinstance(data.get("payload"), dict):
+        data = data["payload"]
+    if function in data:
+        keys = [function]
+    else:
+        keys = [k for k, v in data.items() if isinstance(v, dict) and isinstance(v.get("objects"), list)]
+    if len(keys) != 1 or not isinstance(data[keys[0]], dict) or not isinstance(data[keys[0]].get("objects"), list):
+        return None
+    inner = data[keys[0]]
+    return keys[0], inner["objects"], inner.get("im_w"), inner.get("im_h")
 
 
 def _clamp(value):

@@ -27,17 +27,29 @@ def test_validate_settings():
 
 
 def test_parse_box_formats():
-    dets, _ = bh.parse_detections([det("sleep", 100, 50, 200, 100)], settings(), 400, 200)
+    assert bh.DEFAULT_SETTINGS["box_origin"] == "center"  # CiRA DeepDetect sends box centers
+    dets, _ = bh.parse_detections([det("sleep", 200, 100, 200, 100)], settings(), 400, 200)
     assert dets[0]["box"] == [0.25, 0.25, 0.75, 0.75]
-    dets, _ = bh.parse_detections([det("sleep", 200, 100, 200, 100)], settings(box_origin="center"), 400, 200)
+    topleft = settings(box_origin="topleft")
+    dets, _ = bh.parse_detections([det("sleep", 100, 50, 200, 100)], topleft, 400, 200)
     assert dets[0]["box"] == [0.25, 0.25, 0.75, 0.75]
-    dets, _ = bh.parse_detections([det("sleep", .25, .25, .5, .5)], settings(coord_units="normalized"))
+    dets, _ = bh.parse_detections([det("sleep", .25, .25, .5, .5)], settings(box_origin="topleft", coord_units="normalized"))
     assert dets[0]["box"] == [0.25, 0.25, 0.75, 0.75]
-    dets, _ = bh.parse_detections([det("sleep", 350, 150, 100, 100)], settings(), 400, 200)
+    dets, _ = bh.parse_detections([det("sleep", 350, 150, 100, 100)], topleft, 400, 200)
     assert dets[0]["box"] == [0.875, 0.75, 1.0, 1.0]
-    assert bh.parse_detections([det("sleep", 500, 500)], settings(), 400, 200)[0] == []
+    assert bh.parse_detections([det("sleep", 500, 500)], topleft, 400, 200)[0] == []
     with pytest.raises(ValueError):
         bh.parse_detections([det("sleep")], settings())
+
+
+def test_unwrap_cira_payload():
+    raw = {"DeepDetect": {"count": 1, "im_w": 1100, "im_h": 825, "objects": [det("car")]}}
+    assert bh.unwrap_cira_payload(raw) == ("DeepDetect", [det("car")], 1100, 825)
+    assert bh.unwrap_cira_payload({"payload": raw})[0] == "DeepDetect"
+    assert bh.unwrap_cira_payload({"DeepDetectCPU": {"objects": []}, "other": 1}) == ("DeepDetectCPU", [], None, None)
+    two = {"A": {"objects": []}, "B": {"objects": []}}
+    assert bh.unwrap_cira_payload(two) is None and bh.unwrap_cira_payload(two, "B")[0] == "B"
+    assert bh.unwrap_cira_payload({"x": 1}) is None
 
 
 def test_parse_validation_and_labels():

@@ -14,11 +14,13 @@
   const minuteLabel = minute => new Date(minute + ':00Z').toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
 
   // Shared frame: horizontal gridlines with y labels, a few x labels. Returns x/y scale functions.
-  function frame(root, rows, max, unit) {
+  function frame(root, rows, max, unit, inset = 0) {
     root.replaceChildren();
     root.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-    const innerW = W - PAD.left - PAD.right, innerH = H - PAD.top - PAD.bottom;
-    const x = i => PAD.left + (rows.length === 1 ? innerW / 2 : i * innerW / (rows.length - 1));
+    const innerH = H - PAD.top - PAD.bottom;
+    // inset keeps the first and last bar clear of the y-axis labels
+    const left = PAD.left + inset, innerW = W - left - PAD.right - inset;
+    const x = i => left + (rows.length === 1 ? innerW / 2 : i * innerW / (rows.length - 1));
     const y = v => PAD.top + innerH - (v / max) * innerH;
     for (const v of [0, max / 2, max]) {
       root.append(svg('line', {class: 'grid', x1: PAD.left, x2: W - PAD.right, y1: y(v), y2: y(v)}));
@@ -59,7 +61,7 @@
   function barChart(root, rows) {
     if (!rows.length) return empty(root);
     const max = Math.max(1, Math.ceil(Math.max(...rows.map(r => r.sleeping_avg))));
-    const {x, y, innerW} = frame(root, rows, max, '');
+    const {x, y, innerW} = frame(root, rows, max, '', 14);
     const bw = Math.max(2, Math.min(18, innerW / rows.length * 0.6));
     rows.forEach((r, i) => {
       const top = y(r.sleeping_avg), base = y(0);
