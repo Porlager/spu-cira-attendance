@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}รายชื่อเซ็ค{% endblock %}
+{% block scripts %}<script defer src="/static/js/section.js"></script>{% endblock %}
+{% block heading %}<a class="crumb" href="/admin/sections">ห้องและเซ็ค</a> <span class="muted">/</span> <span id="section-title">เซ็ค</span>{% endblock %}
+{% block content %}
+<section class="stats" aria-label="สรุปเซ็ค">
+  <div class="stat"><div class="stat-label">นักศึกษาในเซ็ค</div><div class="stat-value" id="s-students">0</div><div class="stat-note" id="s-room"></div></div>
+  <div class="stat"><div class="stat-label">มีภาพใบหน้าแล้ว</div><div class="stat-value" id="s-faces">0</div><div class="stat-note">พร้อมเช็คชื่อด้วยกล้อง</div></div>
+  <div class="stat"><div class="stat-label">ยังไม่มีภาพใบหน้า</div><div class="stat-value" id="s-missing">0</div><div class="stat-note">ผู้ดูแลต้องถ่ายภาพก่อนคาบแรก</div></div>
+  <div class="stat"><div class="stat-label">อาจารย์ผู้สอน</div><div class="stat-value stat-text" id="s-teacher">—</div><div class="stat-note">เห็นเซ็คนี้ในหน้าเริ่มคาบ</div></div>
+</section>
+
+<div class="split">
+  <section class="card">
+    <div class="card-head">
+      <h2>รายชื่อ</h2>
+      <div class="row tight">
+        <input type="search" id="roster-search" placeholder="ค้นหารหัสหรือชื่อ" aria-label="ค้นหาในรายชื่อ">
+        <label class="check small"><input type="checkbox" id="missing-only"> <span>เฉพาะยังไม่มีใบหน้า</span></label>
+      </div>
+    </div>
+    <div class="table-wrap roster">
+      <table>
+        <thead><tr><th>รหัส</th><th>ชื่อ</th><th>ใบหน้า</th><th></th></tr></thead>
+        <tbody id="roster"></tbody>
+      </table>
+      <div class="empty" id="roster-empty" hidden></div>
+    </div>
+  </section>
+
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>นำเข้ารายชื่อจาก CSV</h2><a class="small" href="/static/roster-template.csv" download>ไฟล์ตัวอย่าง</a></div>
+      <div class="card-body stack">
+        <p class="muted small">คอลัมน์ 1 = รหัสนักศึกษา, คอลัมน์ 2 = ชื่อ–นามสกุล มีหัวตารางหรือไม่มีก็ได้ บันทึกจาก Excel เป็น CSV ได้ทั้ง UTF-8 และแบบภาษาไทยปกติ</p>
+        <input type="file" id="csv-file" accept=".csv,text/csv" aria-label="เลือกไฟล์ CSV">
+        <div class="import-result" id="import-result" hidden></div>
+        <div class="row tight" id="import-actions" hidden>
+          <button type="button" class="btn btn-primary" id="import-confirm">นำเข้า</button>
+          <button type="button" class="btn btn-secondary" id="import-cancel">ยกเลิก</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>เพิ่มทีละคน</h2></div>
+      <form class="card-body form-grid" id="add-form" novalidate>
+        <label class="field">รหัสนักศึกษา<input type="text" id="add-id" maxlength="30" autocomplete="off"></label>
+        <label class="field">ชื่อ–นามสกุล<input type="text" id="add-name" maxlength="100" autocomplete="off"></label>
+        <div class="span-2"><button class="btn btn-secondary">เพิ่มเข้าเซ็ค</button> <span class="muted small">ถ้ารหัสนี้มีในระบบแล้ว จะใช้ชื่อเดิม</span></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>ตั้งค่าเซ็ค</h2></div>
+      <form class="card-body form-grid" id="edit-form" novalidate>
+        <label class="field span-2">ชื่อวิชา<input type="text" id="edit-name" maxlength="100"></label>
+        <label class="field">ห้อง<select id="edit-room"></select></label>
+        <label class="field">อาจารย์ผู้สอน<select id="edit-teacher"></select></label>
+        <div class="span-2 row tight between">
+          <button class="btn btn-secondary">บันทึก</button>
+          <button type="button" class="btn btn-danger" id="delete-section">ลบเซ็คนี้</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{% endblock %} · SPU Classroom</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-body">
+<main class="auth">
+  <div class="auth-brand">
+    <span class="brand-name">SPU Classroom</span>
+    <span class="brand-sub">ต้นแบบโครงงาน × CiRA CORE</span>
+  </div>
+  <section class="card auth-card">
+    {% block content %}{% endblock %}
+  </section>
+  <p class="auth-note">ข้อมูลใบหน้าและการเข้าเรียนเก็บในเครื่องนี้เท่านั้น ไม่ใช่ระบบทางการของมหาวิทยาลัย</p>
+</main>
+</body>
+</html>

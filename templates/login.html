@@ -1,0 +1,17 @@
+{% extends "auth.html" %}
+{% block title %}เข้าสู่ระบบ{% endblock %}
+{% block content %}
+<h1>เข้าสู่ระบบ</h1>
+<p class="muted small">อาจารย์และผู้ดูแลใช้บัญชีที่ผู้ดูแลสร้างให้</p>
+{% if error %}<div class="message error" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/login" class="form">
+  <input type="hidden" name="next" value="{{ next }}">
+  <label class="field">ชื่อผู้ใช้
+    <input type="text" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" required autofocus>
+  </label>
+  <label class="field">รหัสผ่าน
+    <input type="password" name="password" autocomplete="current-password" required>
+  </label>
+  <button class="btn btn-primary btn-block">เข้าสู่ระบบ</button>
+</form>
+{% endblock %}

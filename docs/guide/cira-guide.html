@@ -56,10 +56,10 @@
   <h2>สรุปสั้นสำหรับคนรีบ</h2>
   <ol class="steps">
     <li><strong>ติดตั้งเว็บบนเครื่องเดียวกับ CiRA CORE (รุ่น desktop)</strong> แล้วรัน <code>python app.py</code> เปิด <code>http://127.0.0.1:5050</code></li>
-    <li><strong>ลงทะเบียนใบหน้า</strong> ผู้ร่วมทดลองที่ยินยอม แล้ว <strong>เปิดคาบ</strong> ในหน้า "ห้องเรียน" (ไม่เปิดคาบ = ข้อมูลถูกปฏิเสธ)</li>
+    <li><strong>ผู้ดูแล</strong> สร้างห้อง (เช่น <code>11-501</code>) เซ็ค รายชื่อ และภาพใบหน้า แล้ว <strong>อาจารย์</strong> เข้าสู่ระบบ → เลือกห้อง → เลือกเซ็ค → เริ่มคาบ (ไม่เปิดคาบ = ข้อมูลถูกปฏิเสธ)</li>
     <li><strong>ดู Debug ของ DeepDetect</strong> จดชื่อคลาสที่โมเดลส่งออกมา</li>
     <li><strong>หน้า "ตั้งค่า CiRA"</strong> จับคู่ชื่อคลาสกับพฤติกรรม (รูปแบบกรอบตั้งตามเอกสาร CiRA ไว้แล้ว)</li>
-    <li><strong>วาง Python+ node ต่อจาก DeepDetect</strong> ใส่โค้ดจาก <code>integrations/cira_python_plus.py</code> แก้บรรทัด <code>REPO</code> บรรทัดเดียว</li>
+    <li><strong>วาง Python+ node ต่อจาก DeepDetect</strong> ใส่โค้ดจาก <code>integrations/cira_python_plus.py</code> แก้ <code>REPO</code> และ <code>ROOM</code> (รหัสห้องของกล้องตัวนี้)</li>
     <li><strong>ตรวจผล</strong> หน้า "ห้องเรียน" ต้องมีกรอบทับคนพอดีและแถบบนเป็นจุดเขียว ส่วน Debug ใน CiRA ต้องเห็น <code>payload.spu.status = "ok"</code></li>
   </ol>
 
@@ -113,9 +113,10 @@ python app.py                      <span class="c"># เปิด http://127.0.0
 
   <h3>เตรียมก่อนส่งข้อมูล</h3>
   <ol>
-    <li>หน้า <strong>ลงทะเบียนใบหน้า</strong>: ถ่าย 3–8 ภาพต่อคน ติ๊กยินยอม แล้วบันทึก (เฉพาะคนที่ยินยอม)</li>
-    <li>หน้า <strong>ห้องเรียน</strong>: ใส่ชื่อคาบ เช่น <code>CPE447 · ห้อง 11-501</code> แล้วกด "เปิดคาบเรียน"</li>
-    <li>เปิดได้ครั้งละหนึ่งคาบ ปิดด้วยปุ่ม "ปิดคาบ" มุมขวาบน หลังปิดแล้ว CiRA ส่งเข้าคาบเดิมไม่ได้</li>
+    <li>เปิดเว็บครั้งแรกจะให้สร้าง <strong>บัญชีผู้ดูแล</strong> แล้วสร้างบัญชีอาจารย์ในหน้า "ผู้ใช้งาน"</li>
+    <li>หน้า <strong>ห้องและเซ็ค</strong>: เพิ่มห้อง (รหัสห้องนี้คือค่า <code>ROOM</code> ที่ CiRA ส่งมา) เพิ่มเซ็ค เลือกห้องและอาจารย์ แล้วนำเข้ารายชื่อจาก CSV</li>
+    <li>หน้า <strong>ลงทะเบียนใบหน้า</strong>: ค้นหานักศึกษาที่ยังไม่มีใบหน้า ถ่าย 3–8 ภาพ ติ๊กยินยอม แล้วบันทึก (เฉพาะคนที่ยินยอม)</li>
+    <li><strong>อาจารย์</strong> เข้าสู่ระบบ → เลือกห้อง → เลือกเซ็ค → "เริ่มคาบ" เปิดได้ห้องละ 1 คาบ ปิดด้วยปุ่ม "ปิดคาบ" ในหน้าห้องเรียน</li>
   </ol>
 
   <h3>ทดลองก่อนมีโมเดล (ไม่บังคับ)</h3>
@@ -214,6 +215,7 @@ python app.py                      <span class="c"># เปิด http://127.0.0
 
 REPO = "/absolute/path/spu-cira-attendance"   <span class="c"># &lt;-- แก้บรรทัดนี้ให้ตรงกับเครื่อง</span>
 BASE_URL = "http://127.0.0.1:5050"
+ROOM = "11-501"          <span class="c"># รหัสห้องของกล้องตัวนี้ (เว้นว่างได้ถ้าเปิดคาบทีละห้อง)</span>
 SEND_IMAGE = True        <span class="c"># False = ส่งเฉพาะกรอบ (เช็คชื่อรายคนไม่ได้)</span>
 TIMEOUT = 2              <span class="c"># วินาที กัน flow ค้างถ้าเว็บไม่ตอบ</span>
 
@@ -229,7 +231,7 @@ def handle_request(req):
     frame = img if SEND_IMAGE and getattr(img, "size", 0) else None
     try:
         result = send_detections(payload, TOKEN_FILE, frame_bgr=frame,      <span class="c"># INPUT</span>
-                                 base_url=BASE_URL, timeout=TIMEOUT)
+                                 base_url=BASE_URL, timeout=TIMEOUT, room=ROOM or None)
         if result is not None:
             _last = dict(flow_output(result), status="ok")
     except Exception as error:      <span class="c"># เว็บปิด/ยังไม่เปิดคาบ: flow ต้องเดินต่อ</span>
@@ -265,6 +267,7 @@ send_output("DeepClassif", payload.get("DeepClassif"), TOKEN_FILE, timeout=2)</c
       <tr><td><code>token_file</code></td><td>(ต้องมี)</td><td>path ของ <code>data/api-token.txt</code></td></tr>
       <tr><td><code>frame_bgr</code></td><td><code>None</code></td><td>ภาพเฟรมเดียวกัน ใส่แล้วได้: เช็คชื่อด้วยใบหน้า, สรุปรายคน, เห็นภาพจริงบนเว็บ</td></tr>
       <tr><td><code>width</code>, <code>height</code></td><td>จาก <code>im_w</code>/<code>im_h</code></td><td>ใส่เองเมื่อ payload ไม่มี <code>im_w</code>/<code>im_h</code> และไม่แนบภาพ</td></tr>
+      <tr><td><code>room</code></td><td><code>None</code></td><td>รหัสห้องจากหน้า "ห้องและเซ็ค" ต้องใส่เมื่อเปิดคาบหลายห้องพร้อมกัน</td></tr>
       <tr><td><code>function</code></td><td><code>"DeepDetect"</code></td><td>key ใน payload และชื่อที่แสดงบนเว็บ</td></tr>
       <tr><td><code>min_interval</code></td><td><code>1.0</code></td><td>ส่งจริงไม่ถี่กว่านี้ (วินาที)</td></tr>
       <tr><td><code>timeout</code></td><td><code>10</code></td><td>ใน Python+ ใช้ 2 วินาทีพอ</td></tr>
@@ -289,7 +292,8 @@ send_output("DeepClassif", payload.get("DeepClassif"), TOKEN_FILE, timeout=2)</c
 Content-Type: application/json
 X-API-Key: &lt;อ่านจาก data/api-token.txt&gt;
 
-{"DeepDetect": {"im_w": 1280, "im_h": 720,
+{"room": "11-501",
+ "DeepDetect": {"im_w": 1280, "im_h": 720,
                 "objects": [{"name": "sleep", "confidence": 0.82, "x": 140, "y": 165, "w": 80, "h": 90}]},
  "image": "&lt;base64 JPEG/PNG ไม่บังคับ&gt;"}</code></pre>
   <p class="small muted">ห่อเป็น <code>{"payload": {...}}</code> ก็ได้ ถ้ามี detector หลาย key ให้เพิ่ม <code>"function": "ชื่อ key"</code></p>
@@ -305,17 +309,14 @@ X-API-Key: &lt;อ่านจาก data/api-token.txt&gt;
       <tr><td><code>└ x, y, w, h</code></td><td>number</td><td>w, h &gt; 0 กรอบที่ล้นภาพจะถูกตัดให้อยู่ในภาพ</td></tr>
       <tr><td><code>width</code>, <code>height</code></td><td>integer</td><td>1–10000 ใช้ <code>im_w</code>/<code>im_h</code> แทนได้ ต้องมีอย่างใดอย่างหนึ่งเมื่อหน่วยเป็นพิกเซล</td></tr>
       <tr><td><code>image</code></td><td>string</td><td>base64 หรือ data URL ไม่เกิน 3 MB ด้านยาวไม่เกิน 4096 px</td></tr>
-      <tr><td><code>session_id</code></td><td>integer</td><td>ไม่บังคับ ถ้าใส่ต้องเป็นคาบที่เปิดอยู่</td></tr>
+      <tr><td><code>room</code></td><td>string</td><td>รหัสห้อง เช่น <code>11-501</code> ต้องใส่เมื่อมีหลายห้องเปิดคาบพร้อมกัน</td></tr>
+      <tr><td><code>session_id</code></td><td>integer</td><td>ไม่บังคับ ถ้าใส่ต้องเป็นคาบที่เปิดอยู่ (ใช้แทน <code>room</code> ได้)</td></tr>
     </tbody>
   </table>
   <div class="note warn">
     <p><strong>REST node ของ CiRA (RestPutJson):</strong> มีใน palette รุ่น desktop แต่ไม่พบเอกสารวิธีตั้ง URL และ header ถ้าใส่ header <code>X-API-Key</code> ไม่ได้ จะใช้ส่งเข้าเว็บนี้ไม่ได้ ให้ใช้ Python+ แทน · JavaScript node ไม่มีเอกสารเรื่องการเรียก HTTP จึงไม่แนะนำ</p>
   </div>
-  <h3>ทางเดิม (ยังใช้ได้)</h3>
-  <ul>
-    <li><code>POST /api/cira/observations</code> <code>{"session_id": 1, "people_count": 12}</code> บันทึกจำนวนคนอย่างเดียว</li>
-    <li><code>POST /api/recognize</code> <code>{"session_id": 1, "image": "..."}</code> เช็คชื่อจากภาพอย่างเดียว ไม่ตรวจพฤติกรรม</li>
-  </ul>
+  <p class="small muted">ทางเดิมที่ยังใช้ได้: <code>POST /api/cira/observations</code> (จำนวนคนอย่างเดียว) และ <code>POST /api/recognize</code> (เช็คชื่อจากภาพอย่างเดียว) ทั้งสองทางไม่สร้างข้อมูลพฤติกรรม</p>
 </section>
 
 <!-- ============ 6 OUTPUT ============ -->
@@ -350,19 +351,19 @@ X-API-Key: &lt;อ่านจาก data/api-token.txt&gt;
 
   <h3>6.2 สรุปทั้งห้องแบบนิ่ง: GET /api/live</h3>
 <pre><code>from cira_bridge import get
-live = get("/api/live", TOKEN_FILE, timeout=2)   <span class="c"># เรียกไม่เกิน 1 ครั้ง/วินาที</span>
+live = get("/api/live?session=%d" % SESSION_ID, TOKEN_FILE, timeout=2)   <span class="c"># SESSION_ID จากคำตอบของ /api/cira/frame</span>
 k = live["kpi"]
 alert = (k["sleeping"] or 0) &gt;= 3                 <span class="c"># None เมื่อยังไม่มีข้อมูล</span>
 present = [r["id"] for r in live["roster"] if r["present"]]</code></pre>
   <table>
     <thead><tr><th style="width:30%">field</th><th>ความหมาย</th></tr></thead>
     <tbody>
-      <tr><td><code>session</code></td><td>คาบที่เปิดอยู่ (<code>id</code>, <code>title</code>, <code>started_at</code>, <code>simulated</code>) หรือ <code>null</code></td></tr>
+      <tr><td><code>session</code></td><td>คาบ (<code>id</code>, <code>title</code>, <code>room_code</code>, <code>teacher_name</code>, <code>started_at</code>, <code>simulated</code>) หรือ <code>null</code></td></tr>
       <tr><td><code>cira.status</code></td><td><code>live</code> (มีเฟรมใน 5 วิ) · <code>error</code> (ถูกปฏิเสธล่าสุด ดู <code>last_error</code>) · <code>connected</code> · <code>offline</code></td></tr>
       <tr><td><code>kpi.registered / present</code></td><td>จำนวนที่ลงทะเบียน / เช็คชื่อแล้วในคาบนี้</td></tr>
       <tr><td><code>kpi.attentive_pct</code></td><td>% ตั้งใจ รวมทุกเฟรมใน 10 วินาทีล่าสุด</td></tr>
       <tr><td><code>kpi.sleeping / inattentive / people</code></td><td>ค่าเฉลี่ยต่อเฟรมใน 10 วินาที (<code>phone</code> เป็น <code>null</code> เมื่อปิด)</td></tr>
-      <tr><td><code>roster[]</code></td><td><code>id</code>, <code>name</code>, <code>present</code>, <code>seen_at</code>, <code>status</code>, <code>status_seconds</code>, <code>frames</code>, <code>shares</code></td></tr>
+      <tr><td><code>roster[]</code></td><td>เฉพาะนักศึกษาในเซ็ค: <code>id</code>, <code>name</code>, <code>present</code>, <code>has_face</code>, <code>status</code>, <code>status_seconds</code>, <code>frames</code>, <code>shares</code></td></tr>
       <tr><td><code>roster[].status</code></td><td><code>attentive</code> · <code>inattentive</code> · <code>sleeping</code> · <code>phone</code> · <code>unknown</code> (ยังไม่ยืนยัน) · <code>not_seen</code> (ไม่เห็นเกิน 20 วิ)</td></tr>
     </tbody>
   </table>
@@ -391,6 +392,8 @@ present = [r["id"] for r in live["roster"] if r["present"]]</code></pre>
       <tr><td><code>HTTP 403: Localhost only</code></td><td>เรียกผ่าน IP เครื่อง ใช้ <code>127.0.0.1</code> หรือ <code>localhost</code> เท่านั้น</td></tr>
       <tr><td><code>ยังไม่มีคาบเรียนที่เปิดอยู่ เปิดคาบในหน้าเว็บก่อน</code></td><td>เปิดคาบในหน้าห้องเรียน</td></tr>
       <tr><td><code>คาบเรียนไม่ตรงกับคาบที่กำลังเปิดอยู่</code></td><td>ส่ง <code>session_id</code> เก่า เอาออก</td></tr>
+      <tr><td><code>มีหลายห้องเปิดคาบอยู่ ต้องส่ง room (รหัสห้อง) มาด้วย</code></td><td>ตั้ง <code>ROOM</code> ใน Python+ ให้ตรงกับห้องของกล้อง</td></tr>
+      <tr><td><code>ห้อง 11-501 ยังไม่มีคาบที่เปิดอยู่</code></td><td>อาจารย์ยังไม่เริ่มคาบในห้องนั้น หรือรหัสห้องสะกดไม่ตรงกับหน้า "ห้องและเซ็ค"</td></tr>
       <tr><td><code>ไม่พบผลตรวจจับ ต้องมี detections หรือ payload ที่มี &lt;ชื่อ node&gt;.objects ...</code></td><td>payload ไม่มี objects หรือมี detector หลายตัว ระบุ <code>function</code></td></tr>
       <tr><td><code>ต้องส่ง width และ height (พิกเซล) ของภาพที่ใช้ตรวจจับ</code></td><td>payload ไม่มี <code>im_w</code>/<code>im_h</code> แนบภาพ หรือส่ง width/height</td></tr>
       <tr><td><code>confidence ต้องอยู่ระหว่าง 0–1 ตรวจการตั้งค่า confidence scale</code></td><td>CiRA ส่ง 0–100 ไปตั้ง "สเกล confidence" เป็น 0–100</td></tr>
@@ -410,7 +413,7 @@ present = [r["id"] for r in live["roster"] if r["present"]]</code></pre>
       <tr><td>กรอบเล็กกระจุกมุมซ้ายบน</td><td>CiRA ส่งสัดส่วน 0–1 แต่ตั้งเป็นพิกเซล</td></tr>
       <tr><td>กรอบใหญ่ล้นภาพ</td><td>width/height ที่ใช้ไม่ใช่ขนาดของภาพที่ตรวจ (เช่น ใช้ ROI)</td></tr>
       <tr><td>ตัวเลขเป็น — ตลอด</td><td>ทุกคลาสยังไม่ได้จับคู่ ดูปุ่ม "+ คลาส" ในหน้าตั้งค่า</td></tr>
-      <tr><td>เข้าเรียน 0 แม้เห็นหน้า</td><td>ไม่ได้แนบภาพ หรือหน้าเล็ก/ไกลเกินไป หรือยังไม่ได้ลงทะเบียน</td></tr>
+      <tr><td>เข้าเรียน 0 แม้เห็นหน้า</td><td>ไม่ได้แนบภาพ หน้าเล็ก/ไกลเกินไป ยังไม่มีภาพใบหน้า หรือคนนั้นไม่อยู่ในรายชื่อเซ็ค</td></tr>
       <tr><td>flow ช้าลงทุก 1 วินาที</td><td>รอเว็บตอบ ลด <code>TIMEOUT</code> หรือตั้ง <code>SEND_IMAGE = False</code> ชั่วคราวเพื่อดูว่าภาพเป็นสาเหตุไหม</td></tr>
     </tbody>
   </table>
@@ -442,6 +445,7 @@ python integrations/cira_bridge.py payload.json --image frame.jpg</code></pre>
     <li>ก้มเขียนหนังสือ / หันคุย: จดว่าโมเดลแยกจากหลับได้หรือไม่</li>
     <li>ปิดเว็บระหว่าง flow รัน: flow ต้องเดินต่อ และ <code>payload.spu.status = "error"</code></li>
     <li>ส่งก่อนเปิดคาบหรือหลังปิดคาบ: ถูกปฏิเสธ และแถบบนแสดงเหตุผล</li>
+    <li>เปิดคาบ 2 ห้องพร้อมกัน ส่ง <code>room</code> ต่างกัน: ข้อมูลไปถูกห้อง</li>
     <li>(ถ้าเปิด) ใช้โทรศัพท์จากมุมกล้องจริง: มองเห็นกี่ครั้งจากกี่ครั้ง เพื่อตัดสินใจว่าจะเก็บฟีเจอร์ไหม</li>
   </ul>
   <div class="note">
@@ -475,7 +479,7 @@ python integrations/cira_bridge.py payload.json --image frame.jpg</code></pre>
       <tr><td><span class="tag in">IN</span></td><td><code>POST /api/cira/observations</code></td><td>ทางเดิม: จำนวนคนอย่างเดียว</td></tr>
       <tr><td><span class="tag in">IN</span></td><td><code>POST /api/recognize</code></td><td>ทางเดิม: เช็คชื่อจากภาพอย่างเดียว</td></tr>
       <tr><td><span class="tag out">OUT</span></td><td>คำตอบของ <code>/api/cira/frame</code></td><td>ผลเฟรมนั้น → <code>payload["spu"]</code></td></tr>
-      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/live</code></td><td>KPI 10 วินาที, รายชื่อพร้อมสถานะ, เฟรมล่าสุด</td></tr>
+      <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/live?session=&lt;id&gt;</code></td><td>KPI 10 วินาที, รายชื่อในเซ็คพร้อมสถานะ, เฟรมล่าสุด</td></tr>
       <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/live/frame</code></td><td>ภาพ JPEG เฟรมล่าสุด (404 ถ้าไม่มี)</td></tr>
       <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/status</code></td><td>คาบที่เปิด + สถานะ CiRA</td></tr>
       <tr><td><span class="tag out">OUT</span></td><td><code>GET /api/sessions/&lt;id&gt;/report</code> · <code>/export</code></td><td>สรุปคาบ ไทม์ไลน์ รายคน · CSV</td></tr>

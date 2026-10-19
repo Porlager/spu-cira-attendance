@@ -1,0 +1,22 @@
+{% extends "auth.html" %}
+{% block title %}ตั้งค่าครั้งแรก{% endblock %}
+{% block content %}
+<h1>สร้างบัญชีผู้ดูแลระบบ</h1>
+<p class="muted small">ทำครั้งเดียวตอนเริ่มใช้งาน ผู้ดูแลจะสร้างห้อง เซ็ค รายชื่อนักศึกษา และบัญชีอาจารย์ต่อได้</p>
+{% if error %}<div class="message error" role="alert">{{ error }}</div>{% endif %}
+<form method="post" action="/setup" class="form">
+  <label class="field">ชื่อผู้ใช้
+    <input type="text" name="username" value="{{ form.get('username', '') }}" autocomplete="username" autocapitalize="none" required autofocus>
+  </label>
+  <label class="field">ชื่อที่แสดง
+    <input type="text" name="name" value="{{ form.get('name', '') }}" placeholder="เช่น ผู้ดูแลห้องปฏิบัติการ" required>
+  </label>
+  <label class="field">รหัสผ่าน (อย่างน้อย 8 ตัว)
+    <input type="password" name="password" autocomplete="new-password" minlength="8" required>
+  </label>
+  <label class="field">ยืนยันรหัสผ่าน
+    <input type="password" name="confirm" autocomplete="new-password" minlength="8" required>
+  </label>
+  <button class="btn btn-primary btn-block">สร้างบัญชีและเข้าสู่ระบบ</button>
+</form>
+{% endblock %}

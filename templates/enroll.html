@@ -24,14 +24,31 @@
   </section>
 
   <section class="card">
-    <div class="card-head"><h2>ข้อมูลนักศึกษา</h2></div>
+    <div class="card-head"><h2>นักศึกษา</h2><span class="muted small" id="missing-count"></span></div>
     <form class="card-body form" id="enroll-form" novalidate>
-      <label class="field">รหัสนักศึกษา
-        <input type="text" id="student-id" maxlength="30" pattern="[A-Za-z0-9_\-]+" placeholder="เช่น 67000001" autocomplete="off">
-      </label>
-      <label class="field">ชื่อ–นามสกุล
-        <input type="text" id="student-name" maxlength="100" autocomplete="off">
-      </label>
+      <div id="pick-block">
+        <label class="field">ค้นหาจากรายชื่อที่นำเข้าแล้ว
+          <input type="search" id="student-search" placeholder="พิมพ์รหัสหรือชื่อ" autocomplete="off">
+        </label>
+        <ul class="pick-list compact" id="student-results"></ul>
+        <button type="button" class="link-button" id="new-student">+ คนที่ยังไม่มีในรายชื่อ</button>
+      </div>
+      <div class="picked" id="picked" hidden>
+        <div>
+          <div class="picked-name" id="picked-name"></div>
+          <div class="muted small" id="picked-meta"></div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="change-student">เปลี่ยน</button>
+      </div>
+      <div class="form" id="new-block" hidden>
+        <label class="field">รหัสนักศึกษา
+          <input type="text" id="student-id" maxlength="30" placeholder="เช่น 67000001" autocomplete="off">
+        </label>
+        <label class="field">ชื่อ–นามสกุล
+          <input type="text" id="student-name" maxlength="100" autocomplete="off">
+        </label>
+        <button type="button" class="link-button" id="back-to-search">กลับไปค้นหาจากรายชื่อ</button>
+      </div>
       <label class="check">
         <input type="checkbox" id="consent">
         <span>เจ้าของใบหน้ายินยอมให้ใช้ภาพเพื่อเช็คชื่อในโครงงานนี้ และรับทราบว่าขอลบข้อมูลได้ทุกเมื่อ</span>
@@ -43,7 +60,7 @@
       </ul>
       <div class="row">
         <button class="btn btn-primary" id="save-student" disabled>บันทึกใบหน้า</button>
-        <span class="muted small" id="save-hint">ต้องมีอย่างน้อย 3 ภาพ และติ๊กยินยอม</span>
+        <span class="muted small" id="save-hint"></span>
       </div>
     </form>
   </section>

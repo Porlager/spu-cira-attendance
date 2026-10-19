@@ -4,13 +4,10 @@
 {% block heading %}ห้องเรียน{% endblock %}
 {% block content %}
 <section class="card empty-card" id="no-session" hidden>
-  <h2>ยังไม่ได้เปิดคาบเรียน</h2>
-  <p class="muted">เปิดคาบก่อน แล้วให้ CiRA CORE ส่งผลตรวจจับเข้ามา ระบบจะเช็คชื่อและสรุปพฤติกรรมในห้องให้</p>
-  <form class="inline-form" id="open-form">
-    <input type="text" id="open-title" placeholder="เช่น CPE447 · ห้อง 11-501" maxlength="100" required aria-label="ชื่อคาบเรียน">
-    <button class="btn btn-primary">เปิดคาบเรียน</button>
-  </form>
-  <p class="hint">ยังไม่มีโมเดลใน CiRA? ทดลองหน้าจอด้วย <code>python integrations/simulate_cira.py</code> ซึ่งจะเปิดคาบจำลองแยกให้เอง</p>
+  <h2>ยังไม่มีคาบที่เปิดอยู่</h2>
+  <p class="muted">เลือกห้องและเซ็คในหน้าเริ่มคาบ แล้วให้ CiRA CORE ส่งผลตรวจจับเข้ามา ระบบจะเช็คชื่อและสรุปพฤติกรรมให้</p>
+  <p><a class="btn btn-primary" href="/">ไปหน้าเริ่มคาบ</a></p>
+  <p class="hint">ยังไม่มีโมเดลใน CiRA? ผู้ดูแลทดลองหน้าจอได้ด้วย <code>python integrations/simulate_cira.py</code> ซึ่งเปิดคาบจำลองแยกให้เอง</p>
 </section>
 
 <div id="live-body" hidden>
@@ -18,7 +15,7 @@
     <div class="stat">
       <div class="stat-label">เข้าเรียน</div>
       <div class="stat-value"><span id="kpi-present">0</span><span class="stat-of" id="kpi-registered">/0</span></div>
-      <div class="stat-note">จำหน้าได้และเช็คชื่อแล้ว</div>
+      <div class="stat-note" id="kpi-faces">จำหน้าได้และเช็คชื่อแล้ว</div>
     </div>
     <div class="stat">
       <div class="stat-label">ตั้งใจเรียน</div>

@@ -7,16 +7,23 @@
   const SHORT = {attentive: 'ตั้งใจ', inattentive: 'ไม่ตั้งใจ', sleeping: 'หลับ', phone: 'มือถือ', person: 'คน'};
   let data = null, bitmap = null, bitmapSeq = -1, mode = 'cira', filter = 'all', busy = false, lastError = '';
   let stream = null, scanning = false, scanResult = null;
+  // Follow the session in the URL, else the user's latest open session (then pin it in the URL).
+  let sessionId = App.sessionId;
+  const query = () => sessionId ? '?session=' + sessionId : '';
 
   async function tick() {
     if (busy || document.hidden) return;
     busy = true;
     try {
-      data = await json('/live');
-      App.renderStatus(data);
+      data = await json('/live' + query());
+      if (!sessionId && data.session) {
+        sessionId = data.session.id;
+        history.replaceState(null, '', '/live?session=' + sessionId);
+      }
+      App.renderStatus({...data, open_sessions: 0});
       lastError = '';
       if (data.frame && data.frame.has_image && data.frame.seq !== bitmapSeq) {
-        const response = await api('/live/frame').catch(() => null);
+        const response = await api('/live/frame' + query()).catch(() => null);
         if (response) {
           bitmap = await createImageBitmap(await response.blob());
           bitmapSeq = data.frame.seq;
@@ -36,6 +43,10 @@
     $('#no-session').hidden = !!session;
     $('#live-body').hidden = !session;
     if (!session) return stopCamera();
+    if (session.ended_at && !render.endedShown) {
+      render.endedShown = true;
+      message('คาบนี้ปิดแล้ว ดูสรุปได้ที่หน้ารายงาน');
+    }
     renderKpis();
     if (mode === 'cira') drawFrame();
     renderLegend();
@@ -46,6 +57,9 @@
     const k = data.kpi;
     $('#kpi-present').textContent = k.present;
     $('#kpi-registered').textContent = '/' + k.registered;
+    $('#kpi-faces').textContent = k.with_faces < k.registered
+      ? 'มีภาพใบหน้า ' + k.with_faces + '/' + k.registered + ' คน'
+      : 'จำหน้าได้และเช็คชื่อแล้ว';
     $('#kpi-attentive').textContent = pct(k.attentive_pct);
     // Head counts are averaged over the window; whole people read better than 4.9.
     $('#kpi-sleeping').textContent = count(k.sleeping);
@@ -157,7 +171,7 @@
       button.setAttribute('aria-pressed', String(button.dataset.filter === filter));
       button.querySelector('span').textContent = groups[button.dataset.filter].length;
     }
-    $('#roster-total').textContent = 'ลงทะเบียน ' + roster.length + ' คน';
+    $('#roster-total').textContent = 'ในเซ็ค ' + roster.length + ' คน';
     const body = $('#roster');
     body.replaceChildren();
     for (const r of groups[filter]) {
@@ -171,7 +185,7 @@
         wrap.append(chip(r.status), el('span', 'muted', duration(r.status_seconds)));
         status.append(wrap);
       } else {
-        status.append(el('span', 'muted', r.status === 'not_seen' ? 'ไม่เห็นในภาพ' : '—'));
+        status.append(el('span', 'muted', !r.has_face && !r.present ? 'ยังไม่มีภาพใบหน้า' : r.status === 'not_seen' ? 'ไม่เห็นในภาพ' : '—'));
       }
       const share = el('td', 'num', r.frames ? pct(r.shares.attentive * 100) : '—');
       tr.append(seen, status, share);
@@ -180,10 +194,7 @@
     const empty = $('#roster-empty');
     empty.hidden = groups[filter].length > 0;
     if (!roster.length) {
-      empty.replaceChildren('ยังไม่มีนักศึกษาลงทะเบียน · ');
-      const link = el('a', null, 'ลงทะเบียนใบหน้า');
-      link.href = '/enroll';
-      empty.append(link);
+      empty.textContent = 'เซ็คนี้ยังไม่มีรายชื่อนักศึกษา ผู้ดูแลนำเข้าได้จากหน้า "ห้องและเซ็ค"';
     } else {
       empty.textContent = 'ไม่มีรายชื่อในกลุ่มนี้';
     }
@@ -244,7 +255,7 @@
       ctx.font = '11px ' + css.getPropertyValue('--font');
       for (const face of scanResult.faces) {
         const [x, y, w, h] = face.box;
-        ctx.strokeStyle = face.student_id ? color('attentive') : color('inattentive');
+        ctx.strokeStyle = face.student_id ? color('face') : color('person');
         ctx.strokeRect(x, y, w, h);
         ctx.fillStyle = ctx.strokeStyle;
         ctx.fillText(face.student_id || 'ไม่รู้จัก', x, Math.max(12, y - 4));
@@ -280,15 +291,6 @@
     scanning = true;
     $('#scan-button').textContent = 'หยุดเช็คชื่อ';
     scan();
-  });
-  $('#open-form').addEventListener('submit', event => {
-    event.preventDefault();
-    run(async () => {
-      await send('/sessions', 'POST', {title: $('#open-title').value});
-      $('#open-title').value = '';
-      message('เปิดคาบเรียนแล้ว รอข้อมูลจาก CiRA');
-      await tick();
-    });
   });
   App.onSessionChange = () => { bitmap = null; tick(); };
   window.addEventListener('resize', () => { if (data && mode === 'cira' && data.session) drawFrame(); });

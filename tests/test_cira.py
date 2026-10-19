@@ -33,11 +33,11 @@ def start_sim(c):
 
 
 def test_pages_render(client):
-    for path in ['/', '/enroll', '/students', '/reports', '/settings']:
+    for path in ['/', '/live', '/enroll', '/students', '/reports', '/settings', '/admin/sections', '/admin/users', '/account']:
         response = client.get(path)
         assert response.status_code == 200, path
         html = response.data.decode()
-        assert 'name="api-key"' in html
+        assert 'name="csrf-token"' in html and 'name="api-key"' not in html
         assert "script-src 'self'" in response.headers['Content-Security-Policy']
         assert 'style="' not in html and not re.search(r'\son\w+=', html)
         assert not re.search(r'<script(?![^>]*\bsrc=)', html)
@@ -156,7 +156,7 @@ def test_live_frame_memory_only(client, tmp_path):
     frame(client, [d('sleep')], image='face')
     response = client.get('/api/live/frame')
     assert response.status_code == 200 and response.mimetype == 'image/jpeg' and response.data[:2] == b'\xff\xd8'
-    assert sorted(p.name for p in tmp_path.iterdir()) == ['api-token.txt', 'attendance.sqlite3']
+    assert sorted(p.name for p in tmp_path.iterdir()) == ['api-token.txt', 'attendance.sqlite3', 'secret-key.txt']
     con = sqlite3.connect(tmp_path/'attendance.sqlite3')
     assert con.execute('SELECT COUNT(*) FROM samples').fetchone()[0] == 3
     client.post(f'/api/sessions/{sid}/close')

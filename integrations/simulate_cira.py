@@ -98,7 +98,8 @@ def main():
     parser.add_argument("--seed", type=int)
     parser.add_argument("--with-identities", action="store_true", help="attach enrolled student ids to some seats")
     parser.add_argument("--keep-open", action="store_true", help="leave the simulated session open at the end")
-    parser.add_argument("--title", help="session title (the web still labels it ข้อมูลจำลอง)")
+    parser.add_argument("--title", help="session title for an ad-hoc simulated class (the web labels it ข้อมูลจำลอง)")
+    parser.add_argument("--section", type=int, help="section id: simulate that section's room and roster")
     args = parser.parse_args()
     call = {"token_file": args.token_file, "base_url": args.base_url}
 
@@ -106,17 +107,31 @@ def main():
     labels = labels_from_settings(settings)
     session = cira_bridge.get("/api/status", **call)["session"]
     opened = False
-    if session and not session["simulated"]:
-        sys.exit("มีคาบจริงเปิดอยู่ ปิดคาบนั้นก่อน ตัวจำลองจะไม่ส่งข้อมูลปนกับคาบจริง")
-    if session:
-        session_id = session["id"]
+    if args.section:
+        data = cira_bridge.get("/api/sections/%d" % args.section, **call)
+        busy = [s for s in cira_bridge.get("/api/sessions", **call)["sessions"]
+                if not s["ended_at"] and s["room_id"] == data["section"]["room_id"]]
+        if busy and not busy[0]["simulated"]:
+            sys.exit("ห้อง %s มีคาบจริงเปิดอยู่ ตัวจำลองจะไม่ส่งข้อมูลปนกับคาบจริง" % data["section"]["room_code"])
+        if busy:
+            session_id = busy[0]["id"]
+        else:
+            session_id = cira_bridge.post("/api/sessions", {"section_id": args.section, "simulated": True}, **call)["id"]
+            opened = True
+        roster = [s["id"] for s in data["students"] if s["samples"]]  # no face photos = never recognized
     else:
-        title = args.title or "คาบจำลอง " + datetime.now().strftime("%H:%M")
-        session_id = cira_bridge.post("/api/sessions", {"title": title, "simulated": True}, **call)["id"]
-        opened = True
+        if session and not session["simulated"]:
+            sys.exit("มีคาบจริงเปิดอยู่ ปิดคาบนั้นก่อน ตัวจำลองจะไม่ส่งข้อมูลปนกับคาบจริง")
+        if session:
+            session_id = session["id"]
+        else:
+            title = args.title or "คาบจำลอง " + datetime.now().strftime("%H:%M")
+            session_id = cira_bridge.post("/api/sessions", {"title": title, "simulated": True}, **call)["id"]
+            opened = True
+        roster = None
     identities = []
     if args.with_identities:
-        identities = [s["id"] for s in cira_bridge.get("/api/students", **call)["students"]]
+        identities = roster if roster is not None else [s["id"] for s in cira_bridge.get("/api/students", **call)["students"] if s["samples"]]
     rng = random.Random(args.seed)
     people = [{"box": box, "state": "attentive", "student_id": identities[i] if i < len(identities) else None}
               for i, box in enumerate(seat_boxes(args.people))]

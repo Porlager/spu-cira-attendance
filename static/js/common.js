@@ -1,8 +1,13 @@
 'use strict';
-// Shared helpers for every page: API calls with the local key, formatting, top bar status.
+// Shared helpers for every page: API calls with the CSRF token, formatting, top bar status.
 const App = (() => {
-  const key = document.querySelector('meta[name="api-key"]').content;
+  const csrf = document.querySelector('meta[name="csrf-token"]').content;
   const $ = (selector, root = document) => root.querySelector(selector);
+  const page = document.body.dataset.page;
+  const role = document.body.dataset.role;
+  const uid = Number(document.body.dataset.uid) || null;
+  const params = new URLSearchParams(location.search);
+  const sessionId = /^\d+$/.test(params.get('session') || '') ? Number(params.get('session')) : null;
   const BEHAVIOR = {
     attentive: 'ตั้งใจเรียน', inattentive: 'ไม่ตั้งใจ', sleeping: 'หลับ', phone: 'ใช้โทรศัพท์',
     person: 'คน (ไม่ระบุพฤติกรรม)', ignore: 'ไม่นับ', unknown: 'ยังไม่ระบุ', not_seen: 'ไม่เห็นในภาพ',
@@ -16,8 +21,12 @@ const App = (() => {
   };
 
   async function api(path, options = {}) {
-    const headers = {'X-API-Key': key, ...(options.body ? {'Content-Type': 'application/json'} : {}), ...options.headers};
-    const response = await fetch('/api' + path, {...options, headers});
+    const headers = {'X-CSRF-Token': csrf, ...(options.body ? {'Content-Type': 'application/json'} : {}), ...options.headers};
+    const response = await fetch('/api' + path, {...options, headers, credentials: 'same-origin'});
+    if (response.status === 401) {
+      location.href = '/login?next=' + encodeURIComponent(location.pathname + location.search);
+      throw new Error('ต้องเข้าสู่ระบบใหม่');
+    }
     if (!response.ok) {
       let text = 'คำขอล้มเหลว (' + response.status + ')';
       try { text = (await response.json()).error || text; } catch (_) { /* not JSON */ }
@@ -32,6 +41,16 @@ const App = (() => {
     const node = document.createElement(tag);
     if (className) node.className = className;
     if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+  }
+  function link(href, text, className) {
+    const node = el('a', className, text);
+    node.href = href;
+    return node;
+  }
+  function option(value, text) {
+    const node = el('option', null, text);
+    node.value = value;
     return node;
   }
   function chip(behavior, label) {
@@ -54,6 +73,7 @@ const App = (() => {
     if (seconds < 3600) return Math.round(seconds / 60) + ' นาทีที่แล้ว';
     return Math.round(seconds / 3600) + ' ชั่วโมงที่แล้ว';
   }
+  const sectionLabel = s => s.course_code ? s.course_code + ' · sec ' + (s.section_name || s.section) : s.title;
 
   let messageTimer;
   function message(text, error = false) {
@@ -71,10 +91,17 @@ const App = (() => {
   let session = null;
   function renderStatus(data) {
     session = data.session;
-    $('#session-title').textContent = session ? session.title : 'ยังไม่เปิดคาบเรียน';
-    $('#session-meta').textContent = session ? '#' + session.id + ' · เริ่ม ' + time(session.started_at) : '';
-    $('#sim-badge').hidden = !(session && session.simulated);
-    $('#close-session').hidden = !session;
+    const s = session;
+    $('#session-title').textContent = s ? s.title + (s.room_code ? ' · ห้อง ' + s.room_code : '') : 'ยังไม่เปิดคาบเรียน';
+    let meta = s ? '#' + s.id + ' · เริ่ม ' + time(s.started_at) + (s.teacher_name ? ' · ' + s.teacher_name : '') : '';
+    if (s && s.ended_at) meta += ' · ปิดแล้ว';
+    if (data.open_sessions > 1) meta += (meta ? ' · ' : '') + 'เปิดอยู่ ' + data.open_sessions + ' ห้อง';
+    $('#session-meta').textContent = meta;
+    $('#sim-badge').hidden = !(s && s.simulated);
+    $('#close-session').hidden = !(s && !s.ended_at && page === 'live');
+    const open = $('#open-live');
+    open.hidden = !(s && !s.ended_at && page !== 'live');
+    if (s) open.href = '/live?session=' + s.id;
     const cira = data.cira;
     const status = $('#cira-status');
     let text = CIRA[cira.status];
@@ -85,21 +112,30 @@ const App = (() => {
     status.title = cira.last_error || '';
     $('#cira-text').textContent = text;
   }
-  const refreshStatus = async () => renderStatus(await json('/status'));
+  const refreshStatus = async () => renderStatus(await json('/status' + (sessionId ? '?session=' + sessionId : '')));
 
   async function download(path, filename) {
     const blob = await (await api(path)).blob();
     const url = URL.createObjectURL(blob);
-    const link = el('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
+    const a = el('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  function readFileBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',').pop());
+      reader.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   const app = {
-    key, $, api, json, send, el, chip, time, dateTime, pct, number, duration, ago, message, run,
-    renderStatus, refreshStatus, download, BEHAVIOR, SOURCE,
+    $, api, json, send, el, link, option, chip, time, dateTime, pct, number, duration, ago, message, run,
+    renderStatus, refreshStatus, download, readFileBase64, sectionLabel, BEHAVIOR, SOURCE, page, role, uid, sessionId,
     get session() { return session; },
     onSessionChange: null,
   };
@@ -107,13 +143,11 @@ const App = (() => {
   $('#close-session').addEventListener('click', () => run(async () => {
     if (!session || !confirm('ปิดคาบ "' + session.title + '"?\nหลังปิดแล้ว CiRA จะส่งข้อมูลเข้าคาบนี้ไม่ได้อีก')) return;
     await send('/sessions/' + session.id + '/close', 'POST');
-    message('ปิดคาบเรียนแล้ว');
-    await refreshStatus();
-    if (app.onSessionChange) app.onSessionChange();
+    location.href = '/reports?session=' + session.id;
   }));
 
   // The live page refreshes status from its own 1-second loop.
-  if (document.body.dataset.page !== 'live') {
+  if (page !== 'live') {
     run(refreshStatus);
     setInterval(() => { if (!document.hidden) refreshStatus().catch(() => {}); }, 5000);
   }

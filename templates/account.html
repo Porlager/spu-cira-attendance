@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}บัญชีของฉัน{% endblock %}
+{% block scripts %}<script defer src="/static/js/account.js"></script>{% endblock %}
+{% block heading %}บัญชีของฉัน{% endblock %}
+{% block content %}
+<section class="card narrow-card">
+  <div class="card-head"><h2>เปลี่ยนรหัสผ่าน</h2><span class="muted small">{{ user.username }}</span></div>
+  <form class="card-body form" id="password-form" novalidate>
+    <label class="field">รหัสผ่านปัจจุบัน<input type="password" id="pw-current" autocomplete="current-password"></label>
+    <label class="field">รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)<input type="password" id="pw-new" autocomplete="new-password"></label>
+    <label class="field">ยืนยันรหัสผ่านใหม่<input type="password" id="pw-confirm" autocomplete="new-password"></label>
+    <div><button class="btn btn-primary">เปลี่ยนรหัสผ่าน</button></div>
+  </form>
+</section>
+{% endblock %}

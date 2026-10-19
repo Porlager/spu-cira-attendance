@@ -134,7 +134,8 @@
     const previous = select.value || new URLSearchParams(location.search).get('session');
     select.replaceChildren();
     for (const s of sessions) {
-      const option = el('option', null, '#' + s.id + ' ' + s.title + ' · ' + dateTime(s.started_at) + (s.simulated ? ' (ข้อมูลจำลอง)' : ''));
+      const option = el('option', null, s.title + (s.room_code ? ' · ห้อง ' + s.room_code : '') + ' · ' + dateTime(s.started_at) +
+        (s.ended_at ? '' : ' (เปิดอยู่)') + (s.simulated ? ' (ข้อมูลจำลอง)' : ''));
       option.value = s.id;
       select.append(option);
     }

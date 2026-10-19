@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}ผู้ใช้งาน{% endblock %}
+{% block scripts %}<script defer src="/static/js/users.js"></script>{% endblock %}
+{% block heading %}ผู้ใช้งาน{% endblock %}
+{% block content %}
+<div class="split">
+  <section class="card">
+    <div class="card-head"><h2>บัญชีทั้งหมด</h2><span class="muted small" id="user-count"></span></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>บทบาท</th><th class="num">เซ็คที่สอน</th><th></th></tr></thead>
+        <tbody id="users"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>เพิ่มบัญชี</h2></div>
+      <form class="card-body form" id="user-form" novalidate>
+        <label class="field">ชื่อที่แสดง<input type="text" id="u-name" maxlength="100" placeholder="เช่น อ.สมชาย ใจดี"></label>
+        <label class="field">ชื่อผู้ใช้<input type="text" id="u-username" maxlength="30" autocomplete="off" autocapitalize="none" placeholder="A-Z, 0-9, _ . -"></label>
+        <label class="field">บทบาท
+          <select id="u-role"><option value="teacher">อาจารย์ — เลือกห้อง/เซ็คของตัวเองและดูรายงาน</option><option value="admin">ผู้ดูแล — จัดการทุกอย่าง</option></select>
+        </label>
+        <label class="field">รหัสผ่านเริ่มต้น (อย่างน้อย 8 ตัว)<input type="password" id="u-password" autocomplete="new-password"></label>
+        <div><button class="btn btn-primary">เพิ่มบัญชี</button></div>
+      </form>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

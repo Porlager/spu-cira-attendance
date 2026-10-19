@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}ห้องและเซ็ค{% endblock %}
+{% block scripts %}<script defer src="/static/js/sections.js"></script>{% endblock %}
+{% block heading %}ห้องและเซ็ค{% endblock %}
+{% block content %}
+<div class="admin-grid">
+  <section class="card">
+    <div class="card-head"><h2>ห้อง</h2><span class="muted small" id="room-count"></span></div>
+    <form class="card-body inline-fields" id="room-form" novalidate>
+      <input type="text" id="room-code" placeholder="รหัส เช่น 11-501" maxlength="20" aria-label="รหัสห้อง">
+      <input type="text" id="room-name" placeholder="ชื่อ (ไม่บังคับ)" maxlength="100" aria-label="ชื่อห้อง">
+      <button class="btn btn-secondary">เพิ่มห้อง</button>
+    </form>
+    <ul class="pick-list" id="rooms"></ul>
+    <p class="hint pad">รหัสห้องคือค่าที่ CiRA ต้องส่งมาใน <code>room</code> เมื่อเปิดคาบหลายห้องพร้อมกัน</p>
+  </section>
+
+  <div class="stack">
+    <section class="card">
+      <div class="card-head"><h2>เพิ่มเซ็ค</h2></div>
+      <form class="card-body form-grid" id="section-form" novalidate>
+        <label class="field">รหัสวิชา<input type="text" id="course-code" maxlength="20" placeholder="เช่น CPE447"></label>
+        <label class="field">เซ็ค<input type="text" id="section-no" maxlength="10" placeholder="เช่น 01"></label>
+        <label class="field span-2">ชื่อวิชา (ไม่บังคับ)<input type="text" id="course-name" maxlength="100"></label>
+        <label class="field">ห้อง<select id="section-room"></select></label>
+        <label class="field">อาจารย์ผู้สอน<select id="section-teacher"></select></label>
+        <div class="span-2"><button class="btn btn-primary">เพิ่มเซ็ค</button></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>เซ็คใน <span id="room-title">ทุกห้อง</span></h2>
+        <button type="button" class="btn btn-secondary btn-sm" id="show-all" hidden>ดูทุกห้อง</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>วิชา</th><th>เซ็ค</th><th>ห้อง</th><th>อาจารย์</th><th class="num">นักศึกษา</th><th class="num">มีใบหน้า</th><th></th></tr></thead>
+          <tbody id="sections"></tbody>
+        </table>
+        <div class="empty" id="sections-empty" hidden></div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -10,14 +10,19 @@
   .shot .lead { font-size: 10pt; margin-bottom: 8pt; }
   .shot ul { margin-bottom: 10pt; }
   .shot img { margin-top: 4pt; }
+  .part { break-before: page; height: 240mm; display: flex; flex-direction: column; justify-content: center; }
+  .part .eyebrow { font-size: 10pt; color: var(--text-3); margin-bottom: 6pt; }
+  .part h1 { font-size: 26pt; }
+  .part p { max-width: 140mm; margin-top: 10pt; font-size: 11pt; color: var(--text-2); }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; }
   .pair figure { margin: 0; }
-  .phone { height: 196mm; overflow: hidden; border: 0.6pt solid var(--border); border-radius: 10pt; }
+  .phone { height: 190mm; overflow: hidden; border: 0.6pt solid var(--border); border-radius: 10pt; }
   .phone img { border: 0; border-radius: 0; }
-  .half img { max-height: 100mm; width: auto; max-width: 100%; }
+  .half img { max-height: 98mm; width: auto; max-width: 100%; }
   .toc-list { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24pt; font-size: 10pt; }
   .toc-list li { padding: 3pt 0; border-bottom: 0.6pt solid var(--border); break-inside: avoid; }
   .toc-list span { color: var(--text-3); margin-right: 6pt; font-variant-numeric: tabular-nums; }
+  .toc-list .group { color: var(--text-3); font-size: 8.5pt; border: 0; padding-top: 8pt; }
 </style>
 </head>
 <body>
@@ -26,20 +31,28 @@
   <div>
     <div class="eyebrow">SPU Classroom · CiRA CORE</div>
     <h1>ภาพตัวอย่างหน้าเว็บ<br>ทุกหน้า</h1>
-    <p class="lead">เว็บเช็คชื่อด้วยใบหน้าและสรุปพฤติกรรมในห้องเรียน (ตั้งใจเรียน / หลับ) ที่รับข้อมูลจาก CiRA CORE</p>
+    <p class="lead">เว็บเช็คชื่อด้วยใบหน้าและสรุปพฤติกรรมในห้องเรียน (ตั้งใจเรียน / หลับ) ที่รับข้อมูลจาก CiRA CORE แยกการใช้งานของอาจารย์และผู้ดูแล</p>
     <div class="note warn" style="margin-top:16pt; max-width:150mm">
-      <p><strong>ข้อมูลในภาพทั้งหมดเป็นข้อมูลจำลอง</strong> ชื่อและรหัสนักศึกษาเป็นชื่อสมมติ ตัวเลขพฤติกรรมมาจากตัวจำลอง (<code>simulate_cira.py</code>) และภาพสังเคราะห์ ไม่ใช่ผลจากห้องเรียนหรือโมเดลจริง</p>
+      <p><strong>ข้อมูลในภาพทั้งหมดเป็นข้อมูลจำลอง</strong> ชื่อนักศึกษา อาจารย์ รหัส และห้องเป็นข้อมูลสมมติ ตัวเลขพฤติกรรมมาจากตัวจำลอง (<code>simulate_cira.py</code>) และภาพสังเคราะห์ ไม่ใช่ผลจากห้องเรียนหรือโมเดลจริง</p>
     </div>
   </div>
   <div>
     <ol class="toc-list">
-      <li><span>1</span>ห้องเรียน ระหว่างคาบ</li>
-      <li><span>2</span>ห้องเรียน เมื่อ CiRA แนบภาพ</li>
-      <li><span>3</span>ก่อนเปิดคาบ และลงทะเบียนใบหน้า</li>
-      <li><span>4</span>นักศึกษา</li>
-      <li><span>5</span>รายงาน</li>
-      <li><span>6</span>ตั้งค่า CiRA</li>
-      <li><span>7</span>บนมือถือ</li>
+      <li class="group">อาจารย์</li>
+      <li><span>1</span>เข้าสู่ระบบ</li>
+      <li><span>2</span>เลือกห้อง</li>
+      <li><span>3</span>เลือกเซ็คแล้วเริ่มคาบ</li>
+      <li><span>4</span>ห้องเรียน ระหว่างคาบ</li>
+      <li><span>5</span>ห้องเรียน เมื่อ CiRA แนบภาพ</li>
+      <li><span>6</span>รายงาน</li>
+      <li class="group">ผู้ดูแล</li>
+      <li><span>7</span>ห้องและเซ็ค</li>
+      <li><span>8</span>รายชื่อเซ็คและนำเข้า CSV</li>
+      <li><span>9</span>ลงทะเบียนใบหน้า</li>
+      <li><span>10</span>นักศึกษา</li>
+      <li><span>11</span>ผู้ใช้งานและบัญชีของฉัน</li>
+      <li><span>12</span>ตั้งค่า CiRA</li>
+      <li><span>13</span>บนมือถือ</li>
     </ol>
     <dl style="margin-top:18pt">
       <dt>Repository</dt><dd><a href="https://github.com/Porlager/spu-cira-attendance">github.com/Porlager/spu-cira-attendance</a></dd>
@@ -49,87 +62,152 @@
   </div>
 </div>
 
+<section class="part">
+  <div class="eyebrow">ส่วนที่ 1</div>
+  <h1>อาจารย์</h1>
+  <p>เข้าสู่ระบบ → เลือกห้อง → เลือกเซ็คที่ตัวเองสอน → เริ่มคาบ แล้วดูผลสดและรายงาน อาจารย์เห็นเฉพาะห้องและเซ็คที่ผู้ดูแลกำหนดให้</p>
+</section>
+
 <section class="shot">
-  <h2>1. ห้องเรียน ระหว่างคาบ</h2>
-  <p class="lead">หน้าแรกที่ผู้สอนเปิดค้างไว้ระหว่างคาบ อัปเดตทุก 1 วินาที</p>
+  <h2>1. เข้าสู่ระบบ</h2>
+  <figure class="half">
+    <img src="img/login.jpg" alt="หน้าเข้าสู่ระบบ">
+    <figcaption>เข้าสู่ระบบด้วยบัญชีที่ผู้ดูแลสร้างให้ ใส่รหัสผิด 5 ครั้งติดกันจะถูกพัก 1 นาที</figcaption>
+  </figure>
+  <figure class="half">
+    <img src="img/setup.jpg" alt="หน้าตั้งค่าครั้งแรก">
+    <figcaption>ครั้งแรกที่เปิดเว็บ (ยังไม่มีบัญชีใดเลย) ระบบจะให้สร้างบัญชีผู้ดูแลก่อน หน้านี้ใช้ได้ครั้งเดียว</figcaption>
+  </figure>
+</section>
+
+<section class="shot">
+  <h2>2. เลือกห้อง</h2>
+  <p class="lead">หน้าแรกหลังเข้าสู่ระบบ แสดงเฉพาะห้องที่มีเซ็คของอาจารย์คนนี้</p>
   <ul>
-    <li><strong>แถบบน:</strong> ชื่อคาบ เวลาเริ่ม ป้าย "ข้อมูลจำลอง" (เฉพาะคาบจำลอง) และสถานะ CiRA จุดเขียว = กำลังส่งข้อมูล จุดแดง = ถูกปฏิเสธพร้อมเหตุผล</li>
-    <li><strong>ตัวเลขสรุป:</strong> เข้าเรียน x/ทั้งหมด · % ตั้งใจเรียนเฉลี่ย 10 วินาที · จำนวนคนหลับ (รวมคนที่ระบุตัวไม่ได้) · คนในภาพ</li>
-    <li><strong>ภาพล่าสุดจาก CiRA:</strong> กรอบสีตามพฤติกรรม เขียว = ตั้งใจ, ส้ม = ไม่ตั้งใจ, แดง = หลับ สลับเป็น "กล้องเครื่องนี้" เพื่อเช็คชื่อด้วยเว็บแคมได้</li>
-    <li><strong>รายชื่อ:</strong> เวลาเช็คชื่อ สถานะปัจจุบันและนานเท่าไร % ตั้งใจของแต่ละคน กรองได้ ทั้งหมด / มาเรียน / ยังไม่พบ / หลับ</li>
+    <li>การ์ดห้องบอกจำนวนเซ็คที่สอนในห้องนั้น และสถานะ "ว่าง" หรือ "มีคาบ" (สีน้ำเงิน = คาบของตัวเอง, สีส้ม = คาบของคนอื่น)</li>
+    <li>ถ้ามีคาบเปิดค้างอยู่ จะมีแถบด้านบนพร้อมปุ่ม "กลับเข้าห้องเรียน"</li>
+  </ul>
+  <img src="img/start.jpg" alt="หน้าเลือกห้อง">
+</section>
+
+<section class="shot">
+  <h2>3. เลือกเซ็คแล้วเริ่มคาบ</h2>
+  <p class="lead">หลังเลือกห้อง ระบบแสดงเซ็คที่อาจารย์สอนในห้องนั้น กด "เริ่มคาบ" แล้วไปหน้าห้องเรียนทันที</p>
+  <ul>
+    <li>แต่ละเซ็คบอกจำนวนนักศึกษาและจำนวนที่มีภาพใบหน้าแล้ว ถ้ายังมีคนไม่มีภาพจะเตือนไว้ข้างปุ่ม</li>
+    <li>เปิดได้ห้องละ 1 คาบ ถ้าห้องมีคาบของคนอื่นเปิดอยู่ ปุ่มจะกดไม่ได้</li>
+  </ul>
+  <img src="img/start-room.jpg" alt="หน้าเลือกเซ็ค">
+</section>
+
+<section class="shot">
+  <h2>4. ห้องเรียน ระหว่างคาบ</h2>
+  <p class="lead">หน้าที่อาจารย์เปิดค้างไว้ระหว่างคาบ อัปเดตทุก 1 วินาที</p>
+  <ul>
+    <li><strong>แถบบน:</strong> วิชา · เซ็ค · ห้อง · อาจารย์ ป้าย "ข้อมูลจำลอง" (เฉพาะคาบจำลอง) และสถานะ CiRA</li>
+    <li><strong>ตัวเลขสรุป:</strong> เข้าเรียน x/คนในเซ็ค (บอกจำนวนที่มีภาพใบหน้า) · % ตั้งใจเรียนเฉลี่ย 10 วินาที · หลับ · คนในภาพ</li>
+    <li><strong>ภาพล่าสุดจาก CiRA:</strong> กรอบสีตามพฤติกรรม เขียว = ตั้งใจ, ส้ม = ไม่ตั้งใจ, แดง = หลับ</li>
+    <li><strong>รายชื่อ:</strong> เฉพาะนักศึกษาในเซ็ค พร้อมเวลาเช็คชื่อ สถานะปัจจุบัน และ % ตั้งใจของแต่ละคน</li>
   </ul>
   <img src="img/live.jpg" alt="หน้าห้องเรียนระหว่างคาบ">
 </section>
 
 <section class="shot">
-  <h2>2. ห้องเรียน เมื่อ CiRA แนบภาพ</h2>
-  <p class="lead">เมื่อ Python+ node ส่งภาพเฟรมเดียวกันมาด้วย เว็บจะแสดงภาพจริงและวาดกรอบทับ</p>
+  <h2>5. ห้องเรียน เมื่อ CiRA แนบภาพ</h2>
+  <p class="lead">ภาพนี้ถ่ายตอนเปิดคาบ 2 ห้องพร้อมกัน (11-501 จำลอง และ 11-502) CiRA ส่ง <code>room = 11-502</code> ข้อมูลจึงเข้าห้องนี้ถูกห้อง</p>
   <ul>
-    <li>ภาพนี้ส่งด้วย payload ของ DeepDetect ทั้งก้อน (x,y เป็นจุดกึ่งกลาง พร้อม <code>im_w</code>/<code>im_h</code>) ผ่าน <code>cira_bridge.py</code> กรอบตรงกับคนในภาพ</li>
-    <li>ภาพเป็น <strong>ภาพสังเคราะห์</strong> สำหรับทดสอบการแสดงผล จึงไม่มีใบหน้าให้จำ เข้าเรียนเป็น 0</li>
+    <li>ส่ง payload ของ DeepDetect ทั้งก้อน (x,y เป็นจุดกึ่งกลาง พร้อม <code>im_w</code>/<code>im_h</code>) ผ่าน <code>cira_bridge.py</code> กรอบตรงกับคนในภาพ</li>
+    <li>ภาพเป็น <strong>ภาพสังเคราะห์</strong> ไม่มีใบหน้าให้จำ เข้าเรียนจึงเป็น 0</li>
     <li>ภาพเก็บในหน่วยความจำเฉพาะเฟรมล่าสุด ไม่บันทึกลงดิสก์ ปิดคาบแล้วหายทันที</li>
-    <li>กรอบเส้นประสีน้ำเงิน (เมื่อมีใบหน้า) คือใบหน้าที่ระบบตรวจพบ ใช้ผูกพฤติกรรมเข้ากับชื่อนักศึกษา</li>
+    <li>ในโหมด "กล้องเครื่องนี้" กรอบใบหน้าที่จำได้เป็นสีน้ำเงิน ที่จำไม่ได้เป็นสีเทา ไม่ใช้สีส้มซ้ำกับ "ไม่ตั้งใจ"</li>
   </ul>
   <img src="img/live-image.jpg" alt="หน้าห้องเรียนเมื่อ CiRA แนบภาพ">
 </section>
 
 <section class="shot">
-  <h2>3. ก่อนเปิดคาบ และลงทะเบียนใบหน้า</h2>
-  <figure class="half">
-    <img src="img/live-empty.jpg" alt="หน้าห้องเรียนก่อนเปิดคาบ">
-    <figcaption>ก่อนเปิดคาบ: ใส่ชื่อคาบแล้วกดเปิด ข้อมูลจาก CiRA จะถูกปฏิเสธจนกว่าจะเปิดคาบ</figcaption>
-  </figure>
-  <figure class="half">
-    <img src="img/enroll.jpg" alt="หน้าลงทะเบียนใบหน้า">
-    <figcaption>ลงทะเบียนใบหน้า: เปิดกล้อง ถ่าย 3–8 ภาพ (ลบทีละภาพได้) กรอกรหัสและชื่อ ติ๊กยินยอม ปุ่มบันทึกจะกดได้เมื่อครบเงื่อนไขและบอกว่ายังขาดอะไร</figcaption>
-  </figure>
-</section>
-
-<section class="shot">
-  <h2>4. นักศึกษา</h2>
-  <p class="lead">รายชื่อที่ลงทะเบียน ค้นหาด้วยรหัสหรือชื่อ</p>
+  <h2>6. รายงาน</h2>
+  <p class="lead">สรุปย้อนหลังรายคาบ อาจารย์เห็นเฉพาะคาบของเซ็คตัวเอง</p>
   <ul>
-    <li>จำนวนภาพใบหน้าที่เก็บ และจำนวนคาบที่เข้าเรียน</li>
-    <li>ปุ่ม "ลบ" ลบภาพใบหน้า ประวัติเช็คชื่อ และพฤติกรรมของคนนั้นทุกคาบ (ถามยืนยันก่อน ย้อนคืนไม่ได้)</li>
-  </ul>
-  <img src="img/students.jpg" alt="หน้านักศึกษา">
-</section>
-
-<section class="shot">
-  <h2>5. รายงาน</h2>
-  <p class="lead">สรุปย้อนหลังรายคาบ เลือกคาบจากเมนูมุมขวาบน</p>
-  <ul>
-    <li><strong>ตัวเลขสรุป:</strong> เข้าเรียน · % ตั้งใจเฉลี่ยทั้งคาบ · หลับพร้อมกันสูงสุด · จำนวนเฟรมที่ได้รับ</li>
-    <li><strong>กราฟรายนาที:</strong> % ตั้งใจเรียน และจำนวนคนหลับเฉลี่ย (วาดเองด้วย SVG ไม่ใช้ไลบรารีภายนอก)</li>
-    <li><strong>รายบุคคล:</strong> แถบสัดส่วนพฤติกรรม นับจากเฟรมที่จับคู่ใบหน้ากับกรอบได้ ไม่ใช่นาทีจริง</li>
+    <li>ตัวเลขสรุป · กราฟ % ตั้งใจเรียนและจำนวนคนหลับรายนาที · ตารางรายบุคคลเฉพาะคนในเซ็ค</li>
     <li>ปุ่ม "ดาวน์โหลด CSV" ได้ไฟล์ที่เปิดใน Excel ได้ภาษาไทย</li>
   </ul>
   <img src="img/reports.jpg" alt="หน้ารายงาน">
 </section>
 
+<section class="part">
+  <div class="eyebrow">ส่วนที่ 2</div>
+  <h1>ผู้ดูแล</h1>
+  <p>เตรียมข้อมูลทั้งหมดก่อนเปิดเทอม: บัญชีอาจารย์ ห้อง เซ็ค รายชื่อนักศึกษา (นำเข้า CSV) และภาพใบหน้า อาจารย์จึงเข้ามาเลือกห้องและเริ่มคาบได้ทันที</p>
+</section>
+
 <section class="shot">
-  <h2>6. ตั้งค่า CiRA</h2>
+  <h2>7. ห้องและเซ็ค</h2>
+  <p class="lead">ซ้ายคือรายการห้อง (กดเพื่อกรองเซ็ค) ขวาคือฟอร์มเพิ่มเซ็คและตารางเซ็คทั้งหมด</p>
+  <ul>
+    <li>รหัสห้องคือค่าที่ CiRA ส่งมาใน <code>room</code> เมื่อเปิดคาบหลายห้องพร้อมกัน</li>
+    <li>คอลัมน์ "มีใบหน้า" สีส้มเมื่อยังมีนักศึกษาที่ยังไม่ถ่ายภาพ</li>
+    <li>ลบห้องที่ยังมีเซ็ค หรือเซ็คที่มีประวัติคาบเรียนไม่ได้ กันข้อมูลหาย</li>
+  </ul>
+  <img src="img/admin-sections.jpg" alt="หน้าห้องและเซ็ค">
+</section>
+
+<section class="shot">
+  <h2>8. รายชื่อเซ็คและนำเข้า CSV</h2>
+  <p class="lead">หน้าของแต่ละเซ็ค: รายชื่อ สถานะภาพใบหน้า การนำเข้า CSV และการตั้งค่าเซ็ค</p>
+  <ul>
+    <li><strong>นำเข้า CSV:</strong> คอลัมน์ 1 = รหัส, 2 = ชื่อ มีหัวตารางหรือไม่ก็ได้ อ่านได้ทั้ง CSV UTF-8 และ CSV ภาษาไทยของ Excel ระบบแสดงตัวอย่าง (เพิ่มกี่คน สร้างใหม่กี่คน แถวไหนผิด) ก่อนกดยืนยัน</li>
+    <li>คนที่ยังไม่มีภาพใบหน้ามีลิงก์ "ถ่ายภาพ" ไปหน้าลงทะเบียนใบหน้าพร้อมเลือกคนนั้นไว้ให้</li>
+    <li>เพิ่มทีละคน เอาออกจากเซ็ค เปลี่ยนห้องหรืออาจารย์ผู้สอนได้ในหน้านี้</li>
+  </ul>
+  <img src="img/admin-section.jpg" alt="หน้ารายชื่อเซ็ค">
+</section>
+
+<section class="shot">
+  <h2>9. ลงทะเบียนใบหน้า</h2>
+  <p class="lead">เป็นหน้าที่ของผู้ดูแลเท่านั้น ค้นหานักศึกษาจากรายชื่อที่นำเข้าแล้ว (เรียงคนที่ยังไม่มีภาพขึ้นก่อน) ถ่าย 3–8 ภาพ ติ๊กยินยอม แล้วบันทึก</p>
+  <img src="img/enroll.jpg" alt="หน้าลงทะเบียนใบหน้า">
+</section>
+
+<section class="shot">
+  <h2>10. นักศึกษา</h2>
+  <p class="lead">นักศึกษาทั้งระบบ พร้อมเซ็คที่อยู่ สถานะภาพใบหน้า และจำนวนคาบที่เข้าเรียน กรอง "ยังไม่มีใบหน้า" ได้</p>
+  <img src="img/students.jpg" alt="หน้านักศึกษา">
+</section>
+
+<section class="shot">
+  <h2>11. ผู้ใช้งานและบัญชีของฉัน</h2>
+  <figure class="half">
+    <img src="img/users.jpg" alt="หน้าผู้ใช้งาน">
+    <figcaption>ผู้ดูแลเพิ่มบัญชีอาจารย์หรือผู้ดูแล ตั้งรหัสผ่านใหม่ให้ และลบบัญชี (ลบตัวเองหรือผู้ดูแลคนสุดท้ายไม่ได้) รหัสผ่านเก็บแบบ hash</figcaption>
+  </figure>
+  <figure class="half">
+    <img src="img/account.jpg" alt="หน้าบัญชีของฉัน">
+    <figcaption>ทุกคนเปลี่ยนรหัสผ่านของตัวเองได้จากลิงก์ใต้ชื่อในเมนูซ้าย</figcaption>
+  </figure>
+</section>
+
+<section class="shot">
+  <h2>12. ตั้งค่า CiRA</h2>
   <p class="lead">ปรับให้ตรงกับโมเดลใน CiRA โดยไม่ต้องแก้โค้ด มีผลกับเฟรมถัดไปทันที</p>
   <ul>
-    <li><strong>การจับคู่คลาส:</strong> ชื่อคลาสจาก DeepDetect → ตั้งใจ / ไม่ตั้งใจ / หลับ / ใช้โทรศัพท์ / คน / ไม่นับ คลาสที่ยังไม่จับคู่ขึ้นเป็นปุ่มให้กดเพิ่ม</li>
-    <li><strong>รูปแบบข้อมูล:</strong> ค่าเริ่มต้นตรงกับเอกสาร CiRA (x,y จุดกึ่งกลาง, พิกเซล, confidence 0–1)</li>
-    <li><strong>ตรวจการใช้โทรศัพท์:</strong> ปิดไว้เป็นค่าเริ่มต้น เพราะกล้องหน้าห้องมักมองไม่เห็น</li>
-    <li><strong>ขวา:</strong> endpoint, path ของไฟล์ API key (ไม่แสดงตัวคีย์), โค้ดตัวอย่าง และ payload ล่าสุดที่ CiRA ส่งมาแยกตาม function</li>
+    <li><strong>การจับคู่คลาส:</strong> ชื่อคลาสจาก DeepDetect → ตั้งใจ / ไม่ตั้งใจ / หลับ / ใช้โทรศัพท์ / คน / ไม่นับ</li>
+    <li><strong>รูปแบบข้อมูล:</strong> ค่าเริ่มต้นตรงกับเอกสาร CiRA (x,y จุดกึ่งกลาง, พิกเซล, confidence 0–1) · ตรวจการใช้โทรศัพท์ปิดไว้</li>
+    <li><strong>ขวา:</strong> endpoint, path ของไฟล์ API key (ไม่แสดงตัวคีย์), โค้ดตัวอย่าง และ payload ล่าสุดจาก CiRA</li>
   </ul>
   <img src="img/settings.jpg" alt="หน้าตั้งค่า CiRA">
 </section>
 
 <section class="shot">
-  <h2>7. บนมือถือ</h2>
-  <p class="lead">เมนูย้ายขึ้นด้านบนและเลื่อนซ้ายขวาได้ ตัวเลขสรุปเรียงเป็น 2 คอลัมน์ ตารางเลื่อนแนวนอนได้</p>
+  <h2>13. บนมือถือ</h2>
+  <p class="lead">เมนูย้ายขึ้นด้านบนและเลื่อนซ้ายขวาได้ การ์ดและตัวเลขเรียงเป็นคอลัมน์เดียว ตารางเลื่อนแนวนอนได้</p>
   <div class="pair">
+    <figure>
+      <div class="phone"><img src="img/start-mobile.jpg" alt="หน้าเลือกห้องบนมือถือ"></div>
+      <figcaption>เริ่มคาบ</figcaption>
+    </figure>
     <figure>
       <div class="phone"><img src="img/live-mobile.jpg" alt="หน้าห้องเรียนบนมือถือ"></div>
       <figcaption>ห้องเรียน (แสดงเฉพาะส่วนบน)</figcaption>
-    </figure>
-    <figure>
-      <div class="phone"><img src="img/reports-mobile.jpg" alt="หน้ารายงานบนมือถือ"></div>
-      <figcaption>รายงาน (แสดงเฉพาะส่วนบน)</figcaption>
     </figure>
   </div>
 </section>
