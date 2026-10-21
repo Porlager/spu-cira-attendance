@@ -6,16 +6,23 @@ import argparse
 import base64
 import json
 import time
-from pathlib import Path
-from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+try:
+    from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+except ImportError:  # Python 2.7 used by ROS Melodic
+    from urllib2 import HTTPError, Request, urlopen
 
 BASE_URL = "http://127.0.0.1:5050"
 _last_sent = {}
+_monotonic = getattr(time, "monotonic", time.time)
+
+def _read_text(path):
+    with open(path, "r") as stream:
+        return stream.read()
 
 
 def post(path, payload, token_file, base_url=BASE_URL, timeout=10):
-    token = Path(token_file).read_text().strip()
+    token = _read_text(token_file).strip()
     req = Request(base_url + path, data=json.dumps(payload).encode(),
                   headers={"Content-Type": "application/json", "X-API-Key": token}, method="POST")
     with urlopen(req, timeout=timeout) as response:
@@ -23,7 +30,7 @@ def post(path, payload, token_file, base_url=BASE_URL, timeout=10):
 
 
 def get(path, token_file, base_url=BASE_URL, timeout=10):
-    token = Path(token_file).read_text().strip()
+    token = _read_text(token_file).strip()
     with urlopen(Request(base_url + path, headers={"X-API-Key": token}), timeout=timeout) as response:
         return json.load(response)
 
@@ -64,7 +71,7 @@ def send_frame(image_bgr, session_id, token_file, base_url=BASE_URL):
     ok, encoded = cv2.imencode(".jpg", frame)
     if not ok:
         raise ValueError("Cannot encode frame")
-    return post("/api/recognize", {"session_id": session_id, "image": base64.b64encode(encoded).decode()}, token_file, base_url)
+    return post("/api/recognize", {"session_id": session_id, "image": base64.b64encode(encoded.tostring()).decode()}, token_file, base_url)
 
 
 def _detector(payload, function):
@@ -109,21 +116,20 @@ def encode_frame(frame_bgr, max_width=1280):
     ok, encoded = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
     if not ok:
         raise ValueError("Cannot encode frame")
-    return base64.b64encode(encoded).decode()
+    return base64.b64encode(encoded.tobytes()).decode()
 
 
 def send_detections(objects, token_file, session_id=None, width=None, height=None, frame_bgr=None,
-                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10, room=None):
+                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10):
     """Send one frame of CiRA results to /api/cira/frame.
 
     objects: a DeepDetect payload or a list of {name, confidence, x, y, w, h}.
     width/height: size of the frame the boxes refer to. Taken from frame_bgr when given,
     otherwise from the payload's im_w/im_h when present.
     frame_bgr: optional same, uncropped frame; enables face check-in and per-student behavior.
-    room: room code set by the admin (e.g. "11-501"); needed when several rooms have a class open.
     Returns the server response, or None when skipped by the min_interval throttle.
     """
-    now = time.monotonic()
+    now = _monotonic()
     if min_interval and now - _last_sent.get(function, float("-inf")) < min_interval:
         return None
     payload = {"function": function, "source": source, "detections": extract_objects(objects, function)}
@@ -132,8 +138,6 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
         width, height = im_w, im_h
     if session_id is not None:
         payload["session_id"] = session_id
-    if room:
-        payload["room"] = room
     if frame_bgr is not None:
         height, width = frame_bgr.shape[:2]
         payload["image"] = encode_frame(frame_bgr)
@@ -145,10 +149,10 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
 
 def flow_output(result):
     """Compact web result to put back into the CiRA payload (e.g. payload["spu"]) for later nodes."""
-    return {"seq": result["seq"], "room": result.get("room"), "people": result["people"], "attentive_pct": result["attentive_pct"],
+    return {"seq": result["seq"], "people": result["people"], "attentive_pct": result["attentive_pct"],
             "sleeping": result["counts"]["sleeping"], "inattentive": result["counts"]["inattentive"],
             "phone": result["counts"]["phone"],
-            "students": {f["student_id"]: f["behavior"] for f in result["faces"] if f["student_id"]},
+            "students": {face["student_id"]: face["behavior"] for face in result["faces"] if face["student_id"]},
             "ignored_labels": result["ignored_labels"]}
 
 
@@ -162,7 +166,6 @@ if __name__ == "__main__":
     parser.add_argument("payload", nargs="?", help="JSON file exported from CiRA Debug; do not commit real classroom payloads")
     parser.add_argument("--mode", choices=["detections", "count"], default="detections")
     parser.add_argument("--session", type=int, help="optional for detections (defaults to the open session), required for count")
-    parser.add_argument("--room", help="room code, needed when several rooms have a class open")
     parser.add_argument("--width", type=int)
     parser.add_argument("--height", type=int)
     parser.add_argument("--image", help="optional same frame as the payload, for face check-in")
@@ -179,7 +182,7 @@ if __name__ == "__main__":
     elif args.mode == "count":
         if args.session is None:
             parser.error("--session is required for --mode count")
-        print(send_deepdetect(json.loads(Path(args.payload).read_text()), args.session, args.token_file,
+        print(send_deepdetect(json.loads(_read_text(args.payload)), args.session, args.token_file,
                               base_url=args.base_url, person_label=args.person_label))
     else:
         frame = None
@@ -188,6 +191,6 @@ if __name__ == "__main__":
             frame = cv2.imread(args.image)
             if frame is None:
                 parser.error("cannot read image " + args.image)
-        print(send_detections(json.loads(Path(args.payload).read_text()), args.token_file, session_id=args.session,
+        print(send_detections(json.loads(_read_text(args.payload)), args.token_file, session_id=args.session,
                               width=args.width, height=args.height, frame_bgr=frame, function=args.function,
-                              base_url=args.base_url, min_interval=0, room=args.room))
+                              base_url=args.base_url, min_interval=0))
