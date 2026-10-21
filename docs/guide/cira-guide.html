@@ -25,7 +25,7 @@
       <text x="18" y="34" class="t-b">CiRA CORE desktop (เพื่อนเป็นคนต่อ)</text>
       <rect x="18" y="50" width="66" height="38" rx="5" class="box"/><text x="51" y="73" class="t" text-anchor="middle">Camera</text>
       <rect x="100" y="50" width="84" height="38" rx="5" class="box"/><text x="142" y="73" class="t" text-anchor="middle">DeepDetect</text>
-      <rect x="200" y="50" width="108" height="38" rx="5" class="box"/><text x="254" y="67" class="t" text-anchor="middle">Python+</text><text x="254" y="80" class="t-s" text-anchor="middle">cira_python_plus.py</text>
+      <rect x="200" y="50" width="108" height="38" rx="5" class="box"/><text x="254" y="67" class="t" text-anchor="middle">FaceRec → Python+</text><text x="254" y="80" class="t-s" text-anchor="middle">cira_python_plus.py</text>
       <rect x="200" y="126" width="108" height="38" rx="5" class="box"/><text x="254" y="143" class="t" text-anchor="middle">Debug / JavaScript</text><text x="254" y="156" class="t-s" text-anchor="middle">ใช้ payload.spu</text>
       <path d="M84 69h14" class="arrow" marker-end="url(#ag)"/><path d="M184 69h14" class="arrow" marker-end="url(#ag)"/>
       <path d="M254 88v36" class="arrow" marker-end="url(#ag)"/>
@@ -45,7 +45,7 @@
     </svg>
     <dl style="margin-top:18pt">
       <dt>Repository</dt><dd><a href="https://github.com/Porlager/spu-cira-attendance">github.com/Porlager/spu-cira-attendance</a></dd>
-      <dt>เวอร์ชันเอกสาร</dt><dd>19 ตุลาคม 2026 · ใช้กับ branch <code>main</code></dd>
+      <dt>เวอร์ชันเอกสาร</dt><dd>21 ตุลาคม 2026 · ใช้กับ branch <code>main</code></dd>
       <dt>สถานะ</dt><dd>API และโค้ด Python+ ทดสอบแล้วด้วยข้อมูลสังเคราะห์และตัวจำลอง ยังไม่ได้ตรวจรับบน CiRA CORE จริง</dd>
     </dl>
   </div>
@@ -210,48 +210,33 @@ python app.py                      <span class="c"># เปิด http://127.0.0
 <!-- ============ 4 PYTHON+ ============ -->
 <section class="page">
   <h2><span class="tag in">INPUT</span> <span class="tag out">OUTPUT</span> 4. Python+ node (แนะนำ)</h2>
-  <p>Python+ node ของ CiRA ใช้ฟังก์ชัน <code>handle_request(req)</code> ที่อ่านข้อมูลด้วย <code>getReqData(req)</code> และส่งต่อด้วย <code>makeRespData(payload, img)</code> (Intro 2025 หน้า 14) ไฟล์ <code>integrations/cira_python_plus.py</code> ใน repo เขียนตามแบบนั้นแล้ว:</p>
-<pre><code>import sys
-
-REPO = "/absolute/path/spu-cira-attendance"   <span class="c"># &lt;-- แก้บรรทัดนี้ให้ตรงกับเครื่อง</span>
+  <p>วาง Python+ ต่อจาก <strong>FaceRec</strong> (ถ้าไม่มี FaceRec ก็ต่อจาก DeepDetect) แล้ววางโค้ดทั้งไฟล์ <code>integrations/cira_python_plus.py</code>:</p>
+<pre><code>WebCam → DeepDetect → FaceRec → Python+ (cira_python_plus.py) → Debug</code></pre>
+  <p>ส่วนที่ต้องตั้งค่าอยู่ด้านบนของไฟล์:</p>
+<pre><code>ROS_SITE = r"C:\opt\ros\melodic\x64\lib\site-packages"   <span class="c"># ให้ Python 3 ไม่ไปใช้โมดูล Python 2 ของ ROS</span>
+REPO = r"C:\Users\Pound\OneDrive\Desktop\spu-cira-attendance"   <span class="c"># &lt;-- ที่อยู่ repo บนเครื่อง CiRA</span>
 BASE_URL = "http://127.0.0.1:5050"
-ROOM = "11-501"          <span class="c"># รหัสห้องของกล้องตัวนี้ (เว้นว่างได้ถ้าเปิดคาบทีละห้อง)</span>
-SEND_IMAGE = True        <span class="c"># False = ส่งเฉพาะกรอบ (เช็คชื่อรายคนไม่ได้)</span>
+ROOM = ""                <span class="c"># รหัสห้อง เช่น "11-501" (เว้นว่างได้ถ้าเปิดคาบทีละห้อง)</span>
+SEND_IMAGE = True        <span class="c"># False = ส่งเฉพาะกรอบ ไม่มีภาพบนเว็บ</span>
 TIMEOUT = 2              <span class="c"># วินาที กัน flow ค้างถ้าเว็บไม่ตอบ</span>
-
-sys.path.append(REPO + "/integrations")
-from cira_bridge import error_message, flow_output, send_detections
-
-TOKEN_FILE = REPO + "/data/api-token.txt"
-_last = {"status": "waiting"}
-
-def handle_request(req):
-    global _last
-    payload, img = getReqData(req)
-    frame = img if SEND_IMAGE and getattr(img, "size", 0) else None
-    try:
-        result = send_detections(payload, TOKEN_FILE, frame_bgr=frame,      <span class="c"># INPUT</span>
-                                 base_url=BASE_URL, timeout=TIMEOUT, room=ROOM or None)
-        if result is not None:
-            _last = dict(flow_output(result), status="ok")
-    except Exception as error:      <span class="c"># เว็บปิด/ยังไม่เปิดคาบ: flow ต้องเดินต่อ</span>
-        _last = {"status": "error", "error": error_message(error)}
-    payload["spu"] = _last                                                <span class="c"># OUTPUT</span>
-    return makeRespData(payload, img)</code></pre>
+PREVIEW_INTERVAL = 0.2   <span class="c"># ส่งภาพระหว่างกลางทุก 0.2 วิ ให้ภาพบนเว็บลื่น (0 = วินาทีละครั้ง)</span></code></pre>
+  <p>ส่วน <code>handle_request(req)</code> ใช้ <code>getReqData</code> / <code>makeRespData</code> ของ CiRA (Intro 2025 หน้า 14) ไม่ต้องแก้</p>
   <h3>สิ่งที่โค้ดนี้ทำ</h3>
   <ul>
-    <li><strong>INPUT:</strong> ส่ง payload ของ DeepDetect ทั้งก้อน + ภาพ <code>img</code> เข้าเว็บ ระบบหา <code>objects</code>, <code>im_w</code>, <code>im_h</code> เอง ย่อภาพเหลือกว้างไม่เกิน 1280 px</li>
-    <li><strong>ส่งจริงไม่เกิน 1 ครั้งต่อวินาที</strong> เฟรมที่เว้นไว้จะได้ผลล่าสุดซ้ำ จึงไม่ถ่วง flow ทุกเฟรม</li>
-    <li><strong>OUTPUT:</strong> ใส่ผลกลับใน <code>payload["spu"]</code> ให้ node ถัดไปใช้ (รายละเอียดหัวข้อ 6.1)</li>
-    <li><strong>ไม่ทำให้ flow หยุด</strong> ถ้าเว็บปิดหรือส่งไม่ผ่าน จะได้ <code>payload["spu"]["status"] = "error"</code> พร้อมเหตุผล</li>
+    <li><strong>INPUT:</strong> ส่งผล DeepDetect + <strong>ชื่อจาก FaceRec</strong> + ภาพ <code>img</code> เข้าเว็บ ระบบหา <code>objects</code>, <code>im_w</code>, <code>im_h</code> และผล FaceRec เอง</li>
+    <li><strong>ผลเต็มวินาทีละครั้ง</strong> (บันทึกเช็คชื่อและพฤติกรรม) ระหว่างนั้นส่ง <strong>ภาพ + กรอบอย่างเดียว</strong> ทุก <code>PREVIEW_INTERVAL</code> ภาพบนเว็บจึงลื่น โดยไม่บันทึกซ้ำ</li>
+    <li><strong>OUTPUT:</strong> ใส่ผลกลับใน <code>payload["spu"]</code> ให้ node ถัดไปใช้ (หัวข้อ 6.1)</li>
+    <li><strong>ไม่ทำให้ service พัง:</strong> ถ้า import ไม่ได้ (REPO ผิด) เว็บปิด หรือส่งไม่ผ่าน Debug จะเห็น <code>spu.status = "error"</code> พร้อม <code>spu.error</code> และ <code>spu.where</code> แทนข้อความ <code>service call error</code></li>
+  </ul>
+  <h3>เช็คชื่อด้วย FaceRec ของ CiRA</h3>
+  <ul>
+    <li>ชื่อที่เทรนใน <strong>FaceTrainer</strong> ต้องเป็นรหัสนักศึกษา เช่น <code>66060711</code> หรือ <code>66060711_ชื่อ</code></li>
+    <li>เว็บนับมาเรียนเฉพาะรหัสที่อยู่ในรายชื่อเซ็คที่เปิดคาบ ชื่ออื่น เช่น <code>unknown</code> ไม่นับ แหล่งที่มาในรายงานคือ <code>cira-facerec</code></li>
+    <li>เมื่อมีผล FaceRec เว็บจะไม่ใช้ตัวจำหน้าของเว็บ (LBPH) จึงไม่ต้องถ่ายภาพลงทะเบียนในเว็บซ้ำ</li>
+    <li>กรอบหน้าจาก FaceRec ใช้ผูกพฤติกรรมรายคน (จุดกึ่งกลางหน้าอยู่ในกรอบ DeepDetect)</li>
   </ul>
   <div class="note warn">
-    <p><strong>ต้องเช็คบนเครื่องจริงก่อน (ยังไม่ได้ทดสอบกับ CiRA ตัวจริง):</strong></p>
-    <ul>
-      <li>ใส่ <code>print(type(img), getattr(img, "shape", None))</code> ชั่วคราว ภาพควรเป็น numpy BGR เช่น <code>(720, 1280, 3)</code> ถ้าติ๊ก "Not use image" ไว้ <code>img</code> อาจว่าง โค้ดจะส่งเฉพาะกรอบ</li>
-      <li>Python ที่ Python+ ใช้ (เลือกได้ด้วยปุ่ม Browse) ต้องมี <code>opencv</code> และ <code>numpy</code> ซึ่งปกติมีอยู่แล้ว bridge ใช้แค่ standard library นอกนั้น รองรับ Python 3.8 ขึ้นไป</li>
-      <li>ถ้ามี detector หลายตัวใน payload ให้ส่ง <code>function="ชื่อ key"</code> เพิ่มใน <code>send_detections(...)</code></li>
-    </ul>
+    <p><strong>ต้องเช็คบนเครื่องจริง:</strong> รูปแบบ payload ของ FaceRec ไม่มีเอกสาร bridge จึงหาเองจากรายการที่มี <code>name</code> + กรอบ (<code>x,y,w,h</code> หรือ <code>rect</code>) ถ้าเช็คชื่อไม่ขึ้น เปิดหน้า "ตั้งค่า CiRA" ส่วน "ผลลัพธ์ล่าสุดจาก CiRA" จะเห็น <code>cira_payload</code> ทั้งก้อนให้ตรวจโครงสร้าง กรอบของ FaceRec ใช้รูปแบบเดียวกับที่ตั้งไว้ (จุดกึ่งกลาง/มุมซ้ายบน)</p>
   </div>
 
   <h3>ส่งผลของ function อื่นมาดู</h3>
@@ -269,7 +254,9 @@ send_output("DeepClassif", payload.get("DeepClassif"), TOKEN_FILE, timeout=2)</c
       <tr><td><code>width</code>, <code>height</code></td><td>จาก <code>im_w</code>/<code>im_h</code></td><td>ใส่เองเมื่อ payload ไม่มี <code>im_w</code>/<code>im_h</code> และไม่แนบภาพ</td></tr>
       <tr><td><code>room</code></td><td><code>None</code></td><td>รหัสห้องจากหน้า "ห้องและเซ็ค" ต้องใส่เมื่อเปิดคาบหลายห้องพร้อมกัน</td></tr>
       <tr><td><code>function</code></td><td><code>"DeepDetect"</code></td><td>key ใน payload และชื่อที่แสดงบนเว็บ</td></tr>
-      <tr><td><code>min_interval</code></td><td><code>1.0</code></td><td>ส่งจริงไม่ถี่กว่านี้ (วินาที)</td></tr>
+      <tr><td><code>min_interval</code></td><td><code>1.0</code></td><td>ส่งผลเต็ม (บันทึกลงรายงาน) ไม่ถี่กว่านี้ (วินาที)</td></tr>
+      <tr><td><code>preview_interval</code></td><td><code>0.2</code></td><td>ส่งภาพ + กรอบระหว่างกลาง (ไม่บันทึก) ให้ภาพลื่น 0 = ปิด</td></tr>
+      <tr><td><code>include_faces</code></td><td><code>True</code></td><td>ส่งผล FaceRec ไปเช็คชื่อด้วย</td></tr>
       <tr><td><code>timeout</code></td><td><code>10</code></td><td>ใน Python+ ใช้ 2 วินาทีพอ</td></tr>
       <tr><td><code>base_url</code></td><td><code>http://127.0.0.1:5050</code></td><td>เปลี่ยนเมื่อใช้ port อื่น</td></tr>
     </tbody>
@@ -392,6 +379,8 @@ present = [r["id"] for r in live["roster"] if r["present"]]</code></pre>
       <tr><td><code>HTTP 403: Localhost only</code></td><td>เรียกผ่าน IP เครื่อง ใช้ <code>127.0.0.1</code> หรือ <code>localhost</code> เท่านั้น</td></tr>
       <tr><td><code>ยังไม่มีคาบเรียนที่เปิดอยู่ เปิดคาบในหน้าเว็บก่อน</code></td><td>เปิดคาบในหน้าห้องเรียน</td></tr>
       <tr><td><code>คาบเรียนไม่ตรงกับคาบที่กำลังเปิดอยู่</code></td><td>ส่ง <code>session_id</code> เก่า เอาออก</td></tr>
+      <tr><td><code>import cira_bridge failed (check REPO)</code> (ใน spu.error)</td><td>ค่า <code>REPO</code> ใน Python+ ไม่ใช่ที่อยู่ repo จริง หรือยังไม่ได้ <code>git pull</code></td></tr>
+      <tr><td><code>service call error</code> (ใน Debug)</td><td>ใช้โค้ด Python+ เวอร์ชันเก่า วางไฟล์ <code>cira_python_plus.py</code> ล่าสุดทับ แล้วดู <code>spu.error</code></td></tr>
       <tr><td><code>มีหลายห้องเปิดคาบอยู่ ต้องส่ง room (รหัสห้อง) มาด้วย</code></td><td>ตั้ง <code>ROOM</code> ใน Python+ ให้ตรงกับห้องของกล้อง</td></tr>
       <tr><td><code>ห้อง 11-501 ยังไม่มีคาบที่เปิดอยู่</code></td><td>อาจารย์ยังไม่เริ่มคาบในห้องนั้น หรือรหัสห้องสะกดไม่ตรงกับหน้า "ห้องและเซ็ค"</td></tr>
       <tr><td><code>ไม่พบผลตรวจจับ ต้องมี detections หรือ payload ที่มี &lt;ชื่อ node&gt;.objects ...</code></td><td>payload ไม่มี objects หรือมี detector หลายตัว ระบุ <code>function</code></td></tr>
@@ -413,6 +402,7 @@ present = [r["id"] for r in live["roster"] if r["present"]]</code></pre>
       <tr><td>กรอบเล็กกระจุกมุมซ้ายบน</td><td>CiRA ส่งสัดส่วน 0–1 แต่ตั้งเป็นพิกเซล</td></tr>
       <tr><td>กรอบใหญ่ล้นภาพ</td><td>width/height ที่ใช้ไม่ใช่ขนาดของภาพที่ตรวจ (เช่น ใช้ ROI)</td></tr>
       <tr><td>ตัวเลขเป็น — ตลอด</td><td>ทุกคลาสยังไม่ได้จับคู่ ดูปุ่ม "+ คลาส" ในหน้าตั้งค่า</td></tr>
+      <tr><td>CiRA วาดชื่อบนหน้า แต่เว็บไม่เช็คชื่อ</td><td>ชื่อใน FaceTrainer ไม่ใช่รหัสนักศึกษา หรือคนนั้นไม่อยู่ในเซ็คนี้ หรือ payload ของ FaceRec ไม่ใช่รูปแบบที่หาเจอ (ดู cira_payload ในหน้าตั้งค่า)</td></tr>
       <tr><td>เข้าเรียน 0 แม้เห็นหน้า</td><td>ไม่ได้แนบภาพ หน้าเล็ก/ไกลเกินไป ยังไม่มีภาพใบหน้า หรือคนนั้นไม่อยู่ในรายชื่อเซ็ค</td></tr>
       <tr><td>flow ช้าลงทุก 1 วินาที</td><td>รอเว็บตอบ ลด <code>TIMEOUT</code> หรือตั้ง <code>SEND_IMAGE = False</code> ชั่วคราวเพื่อดูว่าภาพเป็นสาเหตุไหม</td></tr>
     </tbody>

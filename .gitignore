@@ -10,3 +10,6 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 /exports/
+
+# Local editor/agent settings (machine-specific paths)
+.claude/
