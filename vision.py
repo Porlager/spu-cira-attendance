@@ -52,11 +52,15 @@ class Vision:
         return image
 
     def faces(self, image):
+        """Faces for recognition. Small frames are upscaled the same way as enrollment photos,
+        so the 160x160 crops compared by LBPH look alike."""
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        scale = 2 if gray.shape[1] < 600 else 1
+        big = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR) if scale > 1 else gray
         with self.lock:
-            boxes = self.detector.detectMultiScale(gray, 1.15, 5, minSize=(45, 45))
-        return [(tuple(int(v) for v in box), cv2.equalizeHist(cv2.resize(gray[y:y+h, x:x+w], (160, 160))))
-                for box in boxes for x, y, w, h in [box]]
+            boxes = self.detector.detectMultiScale(big, 1.1, 5, minSize=(60, 60))
+        return [((int(x) // scale, int(y) // scale, int(w) // scale, int(h) // scale),
+                 cv2.equalizeHist(cv2.resize(big[y:y+h, x:x+w], (160, 160)))) for x, y, w, h in boxes]
 
     def enroll_faces(self, image):
         """More forgiving detection for enrollment photos (one person, close to the camera):

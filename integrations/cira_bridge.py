@@ -14,6 +14,9 @@ except ImportError:  # Python 2.7 used by ROS Melodic
 
 BASE_URL = "http://127.0.0.1:5050"
 _last_sent = {}
+_last_preview = {}
+_FACE_LISTS = ("faces", "objects", "results", "persons", "people", "detections")
+_NAME_KEYS = ("name", "label", "id", "class", "person")
 _monotonic = getattr(time, "monotonic", time.time)
 
 def _read_text(path):
@@ -108,19 +111,66 @@ def extract_objects(payload, function="DeepDetect"):
     return clean
 
 
-def encode_frame(frame_bgr, max_width=1280):
+def _face(obj):
+    """{name, x, y, w, h, distance} from one face-recognition result, or None if it is not one."""
+    if not isinstance(obj, dict):
+        return None
+    name = next((obj[k] for k in _NAME_KEYS if isinstance(obj.get(k), (str, int)) and not isinstance(obj.get(k), bool)), None)
+    box = [obj.get(k) for k in ("x", "y", "w", "h")]
+    if not all(type(v) in (int, float) for v in box):
+        rect = next((obj[k] for k in ("rect", "box", "bbox") if isinstance(obj.get(k), (list, tuple))), None)
+        box = list(rect) if rect and len(rect) == 4 and all(type(v) in (int, float) for v in rect) else None
+    if name is None or not box or box[2] <= 0 or box[3] <= 0:
+        return None
+    face = {"name": str(name), "x": box[0], "y": box[1], "w": box[2], "h": box[3]}
+    distance = next((obj[k] for k in ("distance", "dist", "score", "confidence") if type(obj.get(k)) in (int, float)), None)
+    if distance is not None:
+        face["distance"] = distance
+    return face
+
+
+def extract_faces(payload, detector="DeepDetect"):
+    """Face-recognition results from any other node in the payload (e.g. FaceRec), or None if there are none.
+    The exact FaceRec format is not documented, so every list of named boxes outside the detector counts."""
+    if not isinstance(payload, dict):
+        return None
+    found, seen_node = [], False
+    for key, value in payload.items():
+        if key in (detector, "spu") or not isinstance(value, (dict, list)):
+            continue
+        lists = [value] if isinstance(value, list) else [value.get(k) for k in _FACE_LISTS]
+        for items in lists:
+            if isinstance(items, list):
+                faces = [f for f in (_face(o) for o in items) if f]
+                if faces or ("face" in key.lower() and not items):
+                    seen_node = True
+                found.extend(faces)
+    return found if seen_node else None
+
+
+def payload_preview(payload, limit=30000):
+    """Small copy of the raw CiRA payload for the Settings page, so the real node formats can be inspected."""
+    try:
+        text = json.dumps(payload, default=str)
+    except (TypeError, ValueError):
+        return {"note": "payload is not JSON"}
+    return json.loads(text) if len(text) <= limit else {"note": "payload too large", "keys": sorted(payload)}
+
+
+def encode_frame(frame_bgr, max_width=1280, quality=85):
     import cv2
     h, w = frame_bgr.shape[:2]
     if w > max_width:
         frame_bgr = cv2.resize(frame_bgr, (max_width, max(1, round(max_width*h/w))))
-    ok, encoded = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    ok, encoded = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, quality])
     if not ok:
         raise ValueError("Cannot encode frame")
     return base64.b64encode(encoded.tobytes()).decode()
 
 
 def send_detections(objects, token_file, session_id=None, width=None, height=None, frame_bgr=None,
-                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10, room=None):
+                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10, room=None,
+                    preview_interval=0.2, include_faces=True):
     """Send one frame of CiRA results to /api/cira/frame.
 
     objects: a DeepDetect payload or a list of {name, confidence, x, y, w, h}.
@@ -128,12 +178,20 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
     otherwise from the payload's im_w/im_h when present.
     frame_bgr: optional same, uncropped frame; enables face check-in and per-student behavior.
     room: room code set by the admin (e.g. "11-501"); needed when several rooms have a class open.
-    Returns the server response, or None when skipped by the min_interval throttle.
+    preview_interval: between full sends, frames with an image go out as light "preview" frames
+    (picture + boxes only, nothing recorded) so the web view stays smooth. 0 disables previews.
+    include_faces: forward face-recognition results from other nodes (e.g. FaceRec) for check-in.
+    Returns the server response for full sends, or None for previews and throttled frames.
     """
     now = _monotonic()
-    if min_interval and now - _last_sent.get(function, float("-inf")) < min_interval:
+    full = not min_interval or now - _last_sent.get(function, float("-inf")) >= min_interval
+    if not full and not (frame_bgr is not None and preview_interval and
+                         now - _last_preview.get(function, float("-inf")) >= preview_interval):
         return None
     payload = {"function": function, "source": source, "detections": extract_objects(objects, function)}
+    faces = extract_faces(objects, function) if include_faces else None
+    if faces is not None:
+        payload["faces"] = faces
     _, im_w, im_h = _detector(objects, function)
     if width is None and height is None and type(im_w) is int and type(im_h) is int:
         width, height = im_w, im_h
@@ -143,9 +201,16 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
         payload["room"] = room
     if frame_bgr is not None:
         height, width = frame_bgr.shape[:2]
-        payload["image"] = encode_frame(frame_bgr)
+        payload["image"] = encode_frame(frame_bgr, quality=85 if full else 70)
     if width is not None and height is not None:
         payload["width"], payload["height"] = int(width), int(height)
+    _last_preview[function] = now
+    if not full:
+        payload["preview"] = True
+        post("/api/cira/frame", payload, token_file, base_url, timeout)
+        return None
+    if isinstance(objects, dict):
+        payload["cira_payload"] = payload_preview(objects)
     _last_sent[function] = now
     return post("/api/cira/frame", payload, token_file, base_url, timeout)
 

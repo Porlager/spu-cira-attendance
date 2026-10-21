@@ -69,7 +69,6 @@ def create_app(data_dir=None, vision=None):
     db_path = root / "attendance.sqlite3"
     lock = threading.RLock()
     cv = vision or Vision()
-    threshold = float(os.environ.get("LBPH_THRESHOLD", "55"))
 
     def db():
         con = sqlite3.connect(db_path, timeout=15)
@@ -950,7 +949,7 @@ def create_app(data_dir=None, vision=None):
             image = cv.decode(data.get("image"))
             results = []
             for box, face in cv.faces(image):
-                sid, distance = cv.predict(face, threshold)
+                sid, distance = cv.predict(face, config["settings"]["face_threshold"])
                 results.append(dict(box=box, student_id=sid, distance=distance))
             record(session_id, [r["student_id"] for r in results if r["student_id"]], len(results), "local-face")
         return jsonify(faces=results, count=len(results), width=image.shape[1], height=image.shape[0])
@@ -1016,16 +1015,30 @@ def create_app(data_dir=None, vision=None):
             raise ValueError("คาบนี้เป็นคาบจำลอง รับเฉพาะข้อมูลจำลอง" if session["simulated"]
                              else "คาบจริงไม่รับข้อมูลจำลอง ให้ปิดคาบแล้วเปิดคาบจำลองแยก")
         image = data.get("image")
+        preview = data.get("preview") is True   # in-between frame: live picture only, nothing recorded
         detections, unmapped = bh.parse_detections(items, settings, width, height,
                                                    allow_student_id=simulated and image is None)
+        cira_faces = data.get("faces")
         faces, decoded = [], None
         if image is not None:
             decoded = cv.decode(image)
+        if cira_faces is not None:
+            # Identities from CiRA's own face recognition (e.g. the FaceRec node): no web LBPH needed.
+            con = db()
+            try:
+                roster_ids = {r["id"] for r in roster_rows(con, session)}
+            finally:
+                con.close()
+            for f in bh.parse_faces(cira_faces, settings, width, height):
+                faces.append({"student_id": bh.student_for_name(f["name"], roster_ids), "name": f["name"],
+                              "distance": f["distance"], "box": f["box"], "source": "cira"})
+        elif decoded is not None and not preview:
             ih, iw = decoded.shape[:2]
             for (x, y, w, h), face in cv.faces(decoded):
-                student, distance = cv.predict(face, threshold)
+                student, distance = cv.predict(face, settings["face_threshold"])
                 faces.append({"student_id": student, "distance": distance,
                               "box": [round(x / iw, 4), round(y / ih, 4), round((x + w) / iw, 4), round((y + h) / ih, 4)]})
+        if faces:
             matches = bh.match_faces(faces, detections)
             identities = [f["student_id"] for f in faces if f["student_id"]]
         elif simulated:
@@ -1035,6 +1048,28 @@ def create_app(data_dir=None, vision=None):
             matches, identities = {}, []
         counts = bh.summarize(detections)
         known = []
+        if decoded is not None:
+            aspect = decoded.shape[1] / decoded.shape[0]
+        elif settings["coord_units"] == "pixel":
+            aspect = width / height
+        else:
+            aspect = 16 / 9
+
+        def show(frame_dets):
+            live["seq"] += 1
+            live.update(source=source, last_ok=time.time(), last_error=None, last_error_at=None)
+            stream = streams.setdefault(session["id"], {"window": deque(maxlen=300)})
+            stream.update(jpeg=encode_jpeg(decoded) if decoded is not None else None,
+                          frame={"seq": live["seq"], "received_at": now(), "source": source, "function": function,
+                                 "has_image": decoded is not None, "aspect": round(aspect, 4),
+                                 "detections": frame_dets, "faces": faces})
+            return stream
+
+        if preview:
+            with lock:
+                show([dict(d, student_id=s) if s else dict(d) for d, s in
+                      ((d, next((k for k, i in matches.items() if i == n), None)) for n, d in enumerate(detections))])
+            return {"saved": False, "preview": True, "session_id": session["id"], "seq": live["seq"]}
 
         def save(con, stamp, sess):
             stored_dets = [{k: d[k] for k in ("label", "behavior", "kind", "confidence", "box")} for d in detections]
@@ -1049,25 +1084,13 @@ def create_app(data_dir=None, vision=None):
                         DO UPDATE SET frames=frames+1, last_seen=excluded.last_seen""",
                                 (sess["id"], student, detections[index]["behavior"], stamp))
 
+        attendance_source = "simulator" if simulated else "cira-facerec" if cira_faces is not None else "cira-face"
         with lock:
-            record(session["id"], identities, counts["people"], "simulator" if simulated else "cira-face",
-                   count_source=source, extra=save)
+            record(session["id"], identities, counts["people"], attendance_source, count_source=source, extra=save)
             frame_dets = [dict(d) for d in detections]
             for student, index in matches.items():
                 frame_dets[index]["student_id"] = student
-            if decoded is not None:
-                aspect = decoded.shape[1] / decoded.shape[0]
-            elif settings["coord_units"] == "pixel":
-                aspect = width / height
-            else:
-                aspect = 16 / 9
-            live["seq"] += 1
-            live.update(source=source, last_ok=time.time(), last_error=None, last_error_at=None)
-            stream = streams.setdefault(session["id"], {"window": deque(maxlen=300)})
-            stream.update(jpeg=encode_jpeg(decoded) if decoded is not None else None,
-                          frame={"seq": live["seq"], "received_at": now(), "source": source, "function": function,
-                                 "has_image": decoded is not None, "aspect": round(aspect, 4),
-                                 "detections": frame_dets, "faces": faces})
+            stream = show(frame_dets)
             stream["window"].append((time.time(), counts))
             for student in known:
                 smoother.update((session["id"], student), detections[matches[student]]["behavior"])
@@ -1079,7 +1102,7 @@ def create_app(data_dir=None, vision=None):
         return {"saved": True, "session_id": session["id"], "room": session["room_code"], "seq": live["seq"],
                 "people": counts["people"], "counts": {b: counts[b] for b in bh.BEHAVIORS},
                 "attentive_pct": bh.attentive_pct(counts),
-                "faces": [{"student_id": f["student_id"], "distance": f["distance"],
+                "faces": [{"student_id": f["student_id"], "name": f.get("name"), "distance": f["distance"],
                            "behavior": detections[matches[f["student_id"]]]["behavior"] if f["student_id"] in matches else None}
                           for f in faces],
                 "ignored_labels": unmapped}
@@ -1150,6 +1173,17 @@ def create_app(data_dir=None, vision=None):
     @roles("admin", "teacher")
     def live_state():
         settings = config["settings"]
+        if request.args.get("lite"):
+            # Fast path polled several times a second: latest picture and boxes only.
+            con = db()
+            try:
+                sess = pick_session(con, session_arg())
+            finally:
+                con.close()
+            with lock:
+                stream = streams.get(sess["id"]) if sess and not sess["ended_at"] else None
+                return jsonify(session_id=sess["id"] if sess else None, cira=cira_status(),
+                               frame=stream["frame"] if stream else None)
         con = db()
         try:
             sess = pick_session(con, session_arg())

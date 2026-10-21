@@ -43,7 +43,17 @@
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>เพิ่มทีละคน</h2></div>
+      <div class="card-head"><h2>เพิ่มจากนักศึกษาที่มีในระบบ</h2><span class="muted small" id="pool-count"></span></div>
+      <div class="card-body">
+        <label class="field">ค้นหารหัสหรือชื่อ
+          <input type="search" id="pool-search" placeholder="พิมพ์รหัสหรือชื่อ" autocomplete="off">
+        </label>
+        <ul class="pick-list compact" id="pool-results"></ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>เพิ่มคนใหม่</h2></div>
       <form class="card-body form-grid" id="add-form" novalidate>
         <label class="field">รหัสนักศึกษา<input type="text" id="add-id" maxlength="30" autocomplete="off"></label>
         <label class="field">ชื่อ–นามสกุล<input type="text" id="add-name" maxlength="100" autocomplete="off"></label>

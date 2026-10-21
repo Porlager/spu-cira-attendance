@@ -17,6 +17,8 @@ DEFAULT_SETTINGS = {
     "min_confidence": 0.5,
     "smoothing_frames": 3,
     "phone_enabled": False,       # optional: phone
+    # Web face recognition (LBPH) distance cutoff: lower = stricter. Used only when CiRA sends no faces.
+    "face_threshold": 70,
 }
 MAX_DETECTIONS = 300
 
@@ -68,6 +70,10 @@ def validate_settings(data, base=None):
         if type(data["smoothing_frames"]) is not int or not 1 <= data["smoothing_frames"] <= 10:
             raise ValueError("smoothing_frames ต้องเป็นจำนวนเต็ม 1–10")
         result["smoothing_frames"] = data["smoothing_frames"]
+    if "face_threshold" in data:
+        if type(data["face_threshold"]) is not int or not 20 <= data["face_threshold"] <= 150:
+            raise ValueError("face_threshold ต้องเป็นจำนวนเต็ม 20–150")
+        result["face_threshold"] = data["face_threshold"]
     if "phone_enabled" in data:  # optional: phone
         if type(data["phone_enabled"]) is not bool:
             raise ValueError("phone_enabled ต้องเป็น true หรือ false")
@@ -162,6 +168,45 @@ def parse_detections(items, settings, width=None, height=None, allow_student_id=
             detection["student_id"] = student_id
         detections.append(detection)
     return detections, unmapped
+
+
+def parse_faces(items, settings, width=None, height=None):
+    """Face-recognition results from CiRA (e.g. the FaceRec node): [{name, x, y, w, h, distance?}].
+    Boxes follow the same Settings (origin, units) as DeepDetect. Returns [{name, distance, box}]."""
+    if not isinstance(items, list) or len(items) > 100:
+        raise ValueError("faces ต้องเป็น list ไม่เกิน 100 รายการ")
+    if settings["coord_units"] == "pixel":
+        if type(width) is not int or type(height) is not int or width < 1 or height < 1:
+            raise ValueError("ต้องส่ง width และ height (พิกเซล) ของภาพที่ใช้จำหน้า")
+        scale_x, scale_y = width, height
+    else:
+        scale_x = scale_y = 1
+    faces = []
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            raise ValueError("แต่ละ face ต้องมี name")
+        values = [item.get(k) for k in ("x", "y", "w", "h")]
+        if not all(_number(v) for v in values) or values[2] <= 0 or values[3] <= 0:
+            raise ValueError("face ต้องมี x, y, w, h เป็นตัวเลข")
+        x, y, w, h = values
+        if settings["box_origin"] == "center":
+            x, y = x - w / 2, y - h / 2
+        distance = item.get("distance")
+        faces.append({"name": item["name"].strip()[:64],
+                      "distance": round(distance, 2) if _number(distance) else None,
+                      "box": [round(_clamp(v), 4) for v in (x / scale_x, y / scale_y, (x + w) / scale_x, (y + h) / scale_y)]})
+    return faces
+
+
+def student_for_name(name, student_ids):
+    """CiRA FaceRec labels are the names used when training, e.g. "66060711" or "66060711_Lattaphon".
+    Match the exact id first, then an id followed by a separator."""
+    if name in student_ids:
+        return name
+    for sid in student_ids:
+        if name.startswith(sid) and not name[len(sid)].isalnum():
+            return sid
+    return None
 
 
 def summarize(detections):

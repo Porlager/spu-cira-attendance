@@ -3,7 +3,7 @@
 (() => {
   const {$, el, link, option, json, send, api, run, message, readFileBase64} = App;
   const id = Number(location.pathname.split('/').pop());
-  let section = null, students = [], pending = null;
+  let section = null, students = [], pending = null, pool = [];
 
   function render() {
     $('#section-title').textContent = section.course_code + ' · sec ' + section.section;
@@ -70,11 +70,40 @@
     box.hidden = false;
   }
 
+  // Students already in the system but not in this section, searchable like the enroll page.
+  function renderPool() {
+    const query = $('#pool-search').value.trim().toLowerCase();
+    const inSection = new Set(students.map(s => s.id));
+    const rest = pool.filter(s => !inSection.has(s.id));
+    $('#pool-count').textContent = rest.length ? 'นอกเซ็คนี้ ' + rest.length + ' คน' : '';
+    const list = $('#pool-results');
+    list.replaceChildren();
+    const rows = rest.filter(s => !query || s.id.toLowerCase().includes(query) || s.name.toLowerCase().includes(query)).slice(0, 8);
+    for (const s of rows) {
+      const item = el('li');
+      const info = el('div', 'pick');
+      info.append(el('span', 'pick-title', s.id + ' · ' + s.name),
+        el('span', 'muted small', (s.samples ? 'มีใบหน้า ' + s.samples + ' ภาพ' : 'ยังไม่มีใบหน้า') + (s.sections ? ' · ' + s.sections : '')));
+      const add = el('button', 'btn btn-secondary btn-sm', 'เพิ่ม');
+      add.type = 'button';
+      add.addEventListener('click', () => run(async () => {
+        await send('/sections/' + id + '/students', 'POST', {student_ids: [s.id]});
+        message('เพิ่ม ' + s.id + ' เข้าเซ็คแล้ว');
+        await load();
+      }));
+      item.append(info, add);
+      list.append(item);
+    }
+    if (!rows.length) list.append(el('li', 'empty', rest.length ? 'ไม่พบ ลองพิมพ์รหัสอื่น' : 'นักศึกษาทุกคนในระบบอยู่ในเซ็คนี้แล้ว'));
+  }
+
   async function load() {
-    const data = await json('/sections/' + id);
+    const [data, all] = await Promise.all([json('/sections/' + id), json('/students')]);
     section = data.section;
     students = data.students;
+    pool = all.students;
     render();
+    renderPool();
   }
 
   async function loadOptions() {
@@ -141,6 +170,7 @@
     location.href = '/admin/sections';
   }));
   $('#roster-search').addEventListener('input', renderRoster);
+  $('#pool-search').addEventListener('input', renderPool);
   $('#missing-only').addEventListener('change', renderRoster);
   run(async () => {
     await load();

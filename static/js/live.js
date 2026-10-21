@@ -107,11 +107,13 @@
     }
     ctx.setLineDash([4 * ratio, 3 * ratio]);
     ctx.lineWidth = 1.5 * ratio;
-    for (const f of frame.faces) drawBox(ctx, f.box, color('face'), null, width, height, ratio);
+    for (const f of frame.faces) drawBox(ctx, f.box, f.student_id ? color('face') : color('person'), f.student_id || f.name || null, width, height, ratio);
     ctx.setLineDash([]);
     const source = frame.source === 'simulator' ? 'ข้อมูลจำลอง' : 'CiRA ' + frame.function;
     $('#frame-meta').textContent = source + ' · เฟรม #' + frame.seq + ' · ' + time(frame.received_at)
-      + (frame.has_image ? ' · พบใบหน้า ' + frame.faces.length : ' · ไม่มีภาพแนบ แสดงเฉพาะตำแหน่งกรอบ');
+      + (frame.faces.length ? ' · พบใบหน้า ' + frame.faces.length + ' · จำได้ ' + frame.faces.filter(f => f.student_id).length
+        + (frame.faces[0].source === 'cira' ? ' (FaceRec ของ CiRA)' : '') : '')
+      + (frame.has_image ? '' : ' · ไม่มีภาพแนบ แสดงเฉพาะตำแหน่งกรอบ');
   }
 
   function drawBox(ctx, box, stroke, label, width, height, ratio) {
@@ -258,7 +260,7 @@
         ctx.strokeStyle = face.student_id ? color('face') : color('person');
         ctx.strokeRect(x, y, w, h);
         ctx.fillStyle = ctx.strokeStyle;
-        ctx.fillText(face.student_id || 'ไม่รู้จัก', x, Math.max(12, y - 4));
+        ctx.fillText((face.student_id || 'ไม่รู้จัก') + (face.distance !== null ? ' · ระยะ ' + Math.round(face.distance) : ''), x, Math.max(12, y - 4));
       }
       $('#frame-meta').textContent = 'พบใบหน้า ' + scanResult.count + ' · จำได้ ' + scanResult.faces.filter(f => f.student_id).length;
     } catch (error) {
@@ -295,6 +297,25 @@
   App.onSessionChange = () => { bitmap = null; tick(); };
   window.addEventListener('resize', () => { if (data && mode === 'cira' && data.session) drawFrame(); });
   window.addEventListener('beforeunload', stopCamera);
+  // Full data (roster, KPIs) once a second; picture and boxes four times a second.
+  async function frameTick() {
+    if (busy || !data || !data.session || document.hidden || mode !== 'cira') return;
+    try {
+      const lite = await json('/live?lite=1' + (sessionId ? '&session=' + sessionId : ''));
+      if (!lite.frame || (data.frame && lite.frame.seq === data.frame.seq)) return;
+      if (lite.frame.has_image && lite.frame.seq !== bitmapSeq) {
+        const response = await api('/live/frame' + query()).catch(() => null);
+        if (response) {
+          bitmap = await createImageBitmap(await response.blob());
+          bitmapSeq = lite.frame.seq;
+        }
+      }
+      data.frame = lite.frame;
+      drawFrame();
+      renderLegend();
+    } catch (_) { /* the full tick reports errors */ }
+  }
   tick();
   setInterval(tick, 1000);
+  setInterval(frameTick, 250);
 })();

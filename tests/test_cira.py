@@ -116,7 +116,7 @@ def test_frame_image_recognizes_and_attributes(client, tmp_path):
     start(client)
     # FakeVision finds one face at (1,2,50,50) in a 320x240 frame: center ~ (0.08, 0.11).
     result = frame(client, [d('sleep', 0, 0, 128, 120)], image='face').json
-    assert result['faces'] == [{'student_id': '67000001', 'distance': 10, 'behavior': 'sleeping'}]
+    assert result['faces'] == [{'student_id': '67000001', 'name': None, 'distance': 10, 'behavior': 'sleeping'}]
     assert client.get('/api/state').json['attendance'][0]['source'] == 'cira-face'
     con = sqlite3.connect(tmp_path/'attendance.sqlite3')
     assert con.execute('SELECT behavior, frames FROM student_behavior').fetchall() == [('sleeping', 1)]
@@ -264,7 +264,8 @@ def test_python_plus_node(monkeypatch):
     def fail(*a, **kw):
         raise HTTPError('u', 400, 'BAD', {}, io.BytesIO('{"error": "ยังไม่มีคาบ"}'.encode()))
     monkeypatch.setattr(node, 'send_detections', fail)
-    assert node.handle_request(({}, None))[0]['spu'] == {'status': 'error', 'error': 'HTTP 400: ยังไม่มีคาบ'}
+    spu = node.handle_request(({}, None))[0]['spu']
+    assert spu['status'] == 'error' and spu['error'] == 'HTTP 400: ยังไม่มีคาบ' and 'HTTPError' in spu['where']
     sys.modules.pop('cira_bridge', None)
 
 

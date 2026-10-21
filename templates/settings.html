@@ -61,6 +61,10 @@
           <input type="number" id="smoothing_frames" min="1" max="10" step="1">
         </label>
         <p class="hint">กันสถานะกระพริบ เช่น ตั้งไว้ 3 = ต้องเห็นว่าหลับ 3 เฟรมติดกันก่อนขึ้นว่า "หลับ"</p>
+        <label class="field narrow">เกณฑ์จำหน้าของเว็บ (LBPH ระยะ 20–150)
+          <input type="number" id="face_threshold" min="20" max="150" step="1">
+        </label>
+        <p class="hint">ใช้เฉพาะเมื่อ CiRA ไม่ได้ส่งผล FaceRec มา (เช่นโหมดกล้องเครื่องนี้) ค่ายิ่งมากยิ่งจำง่ายแต่เสี่ยงจำผิดคน ดูตัวเลขระยะที่แสดงข้างกรอบหน้าแล้วตั้งให้สูงกว่าระยะของคนที่ลงทะเบียนเล็กน้อย</p>
         <label class="check">
           <input type="checkbox" id="phone_enabled">
           <span>ตรวจการใช้โทรศัพท์ <span class="badge">ทดลอง</span><br><span class="muted small">ปิดไว้เป็นค่าเริ่มต้น กล้องหน้าห้องมักมองไม่เห็นโทรศัพท์เพราะโดนคนข้างหน้าบัง เมื่อปิด กรอบโทรศัพท์จะนับเป็นคนในภาพเท่านั้น</span></span>

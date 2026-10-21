@@ -5,7 +5,7 @@
     attentive: 'ตั้งใจเรียน', inattentive: 'ไม่ตั้งใจ', sleeping: 'หลับ', phone: 'ใช้โทรศัพท์ (ทดลอง)',
     person: 'คน (นับจำนวนอย่างเดียว)', ignore: 'ไม่นับ',
   };
-  const NUMBERS = ['confidence_scale', 'min_confidence', 'smoothing_frames'];
+  const NUMBERS = ['confidence_scale', 'min_confidence', 'smoothing_frames', 'face_threshold'];
   let behaviors = Object.keys(TARGETS), unmapped = [];
 
   function addRow(name = '', target = 'attentive') {
