@@ -3,7 +3,9 @@
 (() => {
   const {$, el, json, send, run, message} = App;
   const MIN = 3, MAX = 8;
-  let stream = null, images = [], students = [], picked = null, creating = false;
+  // images: [{src, ok}] where ok is null while the server is still checking the photo
+  let stream = null, images = [], students = [], picked = null, creating = false, checking = false;
+  const usable = () => images.filter(i => i.ok === true);
 
   function stopCamera() {
     if (stream) stream.getTracks().forEach(track => track.stop());
@@ -13,7 +15,32 @@
     $('#camera-empty').hidden = false;
     $('#camera-button').textContent = 'เปิดกล้อง';
     $('#camera-state').textContent = 'ปิดอยู่';
+    $('#face-guide').hidden = true;
+    $('#face-status').hidden = true;
     update();
+  }
+
+  // Live hint while the camera is on: is there exactly one clear face right now?
+  async function watchFace() {
+    if (!stream) return;
+    if (!checking && !document.hidden && $('#video').videoWidth) {
+      checking = true;
+      try {
+        const result = await send('/faces/check', 'POST', {image: capture()});
+        showFace(result.ok, result.ok ? 'พบใบหน้า พร้อมถ่าย' : result.reason + ' · ' + (result.reason === 'ไม่พบใบหน้า' ? 'ขยับให้หน้าอยู่ในกรอบและมองกล้อง' : 'ให้มีคนเดียวในภาพ'));
+      } catch (_) { /* keep the last hint */ } finally {
+        checking = false;
+      }
+    }
+    setTimeout(watchFace, 900);
+  }
+
+  function showFace(ok, text) {
+    for (const id of ['#face-guide', '#face-status']) {
+      $(id).hidden = !stream;
+      $(id).dataset.state = ok ? 'ok' : 'bad';
+    }
+    $('#face-status').textContent = text;
   }
 
   function capture() {
@@ -27,7 +54,7 @@
   }
 
   function update() {
-    $('#sample-count').textContent = images.length + ' / ' + MAX + ' ภาพ';
+    $('#sample-count').textContent = 'ใช้ได้ ' + usable().length + ' · ถ่ายแล้ว ' + images.length + ' / ' + MAX + ' ภาพ';
     $('#capture').disabled = !stream || images.length >= MAX;
     const missing = [];
     if (creating) {
@@ -36,7 +63,8 @@
     } else if (!picked) {
       missing.push('เลือกนักศึกษา');
     }
-    if (images.length < MIN) missing.push('ถ่ายอีก ' + (MIN - images.length) + ' ภาพ');
+    if (images.some(i => i.ok === null)) missing.push('กำลังตรวจภาพ');
+    else if (usable().length < MIN) missing.push('ต้องมีภาพที่พบใบหน้าอีก ' + (MIN - usable().length) + ' ภาพ');
     if (!$('#consent').checked) missing.push('ติ๊กยินยอม');
     $('#save-student').disabled = missing.length > 0;
     $('#save-hint').textContent = missing.length ? 'ยังขาด: ' + missing.join(' · ') : 'พร้อมบันทึก';
@@ -45,15 +73,17 @@
   function renderSamples() {
     const box = $('#samples');
     box.replaceChildren();
-    images.forEach((src, index) => {
+    images.forEach((photo, index) => {
       const item = el('div', 'thumb');
+      item.dataset.state = photo.ok === null ? 'wait' : photo.ok ? 'ok' : 'bad';
       const img = el('img');
-      img.src = src;
+      img.src = photo.src;
       img.alt = 'ภาพที่ ' + (index + 1);
       const remove = el('button', null, 'ลบ');
       remove.type = 'button';
       remove.addEventListener('click', () => { images.splice(index, 1); renderSamples(); });
-      item.append(img, remove);
+      const state = el('span', 'thumb-state', photo.ok === null ? 'กำลังตรวจ' : photo.ok ? 'พบใบหน้า' : photo.reason);
+      item.append(img, remove, state);
       box.append(item);
     });
     update();
@@ -121,11 +151,23 @@
     $('#camera-button').textContent = 'ปิดกล้อง';
     $('#camera-state').textContent = 'กำลังใช้งาน';
     update();
+    watchFace();
   }));
   $('#capture').addEventListener('click', () => run(async () => {
     if (images.length >= MAX) return;
-    images.push(capture());
+    const photo = {src: capture(), ok: null};
+    images.push(photo);
     renderSamples();
+    try {
+      const result = await send('/faces/check', 'POST', {image: photo.src});
+      photo.ok = result.ok;
+      photo.reason = result.reason || '';
+    } catch (error) {
+      photo.ok = false;
+      photo.reason = 'ตรวจไม่สำเร็จ';
+    }
+    renderSamples();
+    if (!photo.ok) message('ภาพนี้' + photo.reason + ' จะไม่ถูกใช้ ลบแล้วถ่ายใหม่ได้', true);
   }));
   $('#student-search').addEventListener('input', renderResults);
   $('#change-student').addEventListener('click', showSearch);
@@ -144,10 +186,11 @@
     run(async () => {
       $('#save-student').disabled = true;
       try {
+        const good = usable().map(i => i.src);
         const result = creating
-          ? await send('/students', 'POST', {id: $('#student-id').value.trim(), name: $('#student-name').value.trim(), consent: true, images})
-          : await send('/students/' + encodeURIComponent(picked.id) + '/faces', 'POST', {consent: $('#consent').checked, images});
-        message('บันทึกใบหน้า ' + result.id + ' แล้ว (' + result.samples + ' ภาพ)');
+          ? await send('/students', 'POST', {id: $('#student-id').value.trim(), name: $('#student-name').value.trim(), consent: true, images: good})
+          : await send('/students/' + encodeURIComponent(picked.id) + '/faces', 'POST', {consent: $('#consent').checked, images: good});
+        message('บันทึกใบหน้า ' + result.id + ' แล้ว (' + result.samples + ' ภาพ' + (result.skipped.length ? ' ข้าม ' + result.skipped.length + ' ภาพที่ไม่ชัด' : '') + ')');
         images = [];
         $('#enroll-form').reset();
         renderSamples();

@@ -20,7 +20,7 @@ from werkzeug.exceptions import HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 import behavior as bh
 import roster
-from vision import Vision, encode_jpeg
+from vision import Vision, encode_jpeg, pick_enrollment_face
 
 FUNCTION_NAME = re.compile(r"[A-Za-z0-9 _.\-]{1,40}")
 USERNAME = re.compile(r"[A-Za-z0-9_.\-]{3,30}")
@@ -769,19 +769,41 @@ def create_app(data_dir=None, vision=None):
         finally:
             con.close()
 
+    def enrollment_face(image):
+        """(box, face, width, height) of the one face to enroll in a photo, or ValueError with the reason."""
+        decoded = cv.decode(image)
+        finder = getattr(cv, "enroll_faces", cv.faces)
+        box, face = pick_enrollment_face(finder(decoded))
+        return box, face, decoded.shape[1], decoded.shape[0]
+
     def face_samples(data):
+        """Usable samples from 3–8 photos. Photos without exactly one clear face are skipped;
+        fewer than 3 usable photos is an error that names the photos to retake."""
         if data.get("consent") is not True:
             raise ValueError("ต้องยินยอมลงทะเบียนใบหน้าก่อน")
         images = data.get("images")
         if not isinstance(images, list) or not 3 <= len(images) <= 8:
             raise ValueError("ต้องใช้ 3–8 ภาพที่เห็นใบหน้าเพียงคนเดียว")
-        samples = []
-        for image in images:
-            faces = cv.faces(cv.decode(image))
-            if len(faces) != 1:
-                raise ValueError("ทุกภาพต้องตรวจพบใบหน้าเพียง 1 คน กรุณาถ่ายใหม่")
-            samples.append(faces[0][1].tobytes())
-        return samples
+        samples, problems = [], []
+        for number, image in enumerate(images, 1):
+            try:
+                samples.append(enrollment_face(image)[1].tobytes())
+            except ValueError as error:
+                problems.append((number, str(error)))
+        if len(samples) < 3:
+            detail = " · ".join("ภาพที่ %d: %s" % p for p in problems)
+            raise ValueError("ใช้ได้ %d ภาพ ต้องมีอย่างน้อย 3 ภาพ ถ่ายใหม่แทน %s" % (len(samples), detail))
+        return samples, [n for n, _ in problems]
+
+    @app.post("/api/faces/check")
+    @roles("admin")
+    def check_face():
+        """Instant feedback for the enrollment camera: is there exactly one clear face?"""
+        try:
+            (x, y, w, h), _, width, height = enrollment_face(body().get("image"))
+        except ValueError as error:
+            return jsonify(ok=False, reason=str(error))
+        return jsonify(ok=True, box=[x / width, y / height, (x + w) / width, (y + h) / height])
 
     @app.post("/api/students")
     @roles("admin")
@@ -789,7 +811,7 @@ def create_app(data_dir=None, vision=None):
         data = body()
         sid = student_id(data.get("id"))
         name = required_text(data.get("name"), "ชื่อ", 100)
-        samples = face_samples(data)
+        samples, skipped = face_samples(data)
         with lock:
             con = db()
             try:
@@ -801,13 +823,13 @@ def create_app(data_dir=None, vision=None):
                 retrain()
             finally:
                 con.close()
-        return jsonify(id=sid, samples=len(samples)), 201
+        return jsonify(id=sid, samples=len(samples), skipped=skipped), 201
 
     @app.post("/api/students/<sid>/faces")
     @roles("admin")
     def replace_faces(sid):
         """Face photos for a student who came from a CSV roster (replaces any older photos)."""
-        samples = face_samples(body())
+        samples, skipped = face_samples(body())
         with lock:
             con = db()
             try:
@@ -819,7 +841,7 @@ def create_app(data_dir=None, vision=None):
                 retrain()
             finally:
                 con.close()
-        return jsonify(id=sid, samples=len(samples))
+        return jsonify(id=sid, samples=len(samples), skipped=skipped)
 
     @app.delete("/api/students/<sid>")
     @roles("admin")

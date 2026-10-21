@@ -71,7 +71,7 @@ def send_frame(image_bgr, session_id, token_file, base_url=BASE_URL):
     ok, encoded = cv2.imencode(".jpg", frame)
     if not ok:
         raise ValueError("Cannot encode frame")
-    return post("/api/recognize", {"session_id": session_id, "image": base64.b64encode(encoded.tostring()).decode()}, token_file, base_url)
+    return post("/api/recognize", {"session_id": session_id, "image": base64.b64encode(encoded.tobytes()).decode()}, token_file, base_url)
 
 
 def _detector(payload, function):
@@ -120,13 +120,14 @@ def encode_frame(frame_bgr, max_width=1280):
 
 
 def send_detections(objects, token_file, session_id=None, width=None, height=None, frame_bgr=None,
-                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10):
+                    function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10, room=None):
     """Send one frame of CiRA results to /api/cira/frame.
 
     objects: a DeepDetect payload or a list of {name, confidence, x, y, w, h}.
     width/height: size of the frame the boxes refer to. Taken from frame_bgr when given,
     otherwise from the payload's im_w/im_h when present.
     frame_bgr: optional same, uncropped frame; enables face check-in and per-student behavior.
+    room: room code set by the admin (e.g. "11-501"); needed when several rooms have a class open.
     Returns the server response, or None when skipped by the min_interval throttle.
     """
     now = _monotonic()
@@ -138,6 +139,8 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
         width, height = im_w, im_h
     if session_id is not None:
         payload["session_id"] = session_id
+    if room:
+        payload["room"] = room
     if frame_bgr is not None:
         height, width = frame_bgr.shape[:2]
         payload["image"] = encode_frame(frame_bgr)
@@ -149,7 +152,7 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
 
 def flow_output(result):
     """Compact web result to put back into the CiRA payload (e.g. payload["spu"]) for later nodes."""
-    return {"seq": result["seq"], "people": result["people"], "attentive_pct": result["attentive_pct"],
+    return {"seq": result["seq"], "room": result.get("room"), "people": result["people"], "attentive_pct": result["attentive_pct"],
             "sleeping": result["counts"]["sleeping"], "inattentive": result["counts"]["inattentive"],
             "phone": result["counts"]["phone"],
             "students": {face["student_id"]: face["behavior"] for face in result["faces"] if face["student_id"]},
@@ -166,6 +169,7 @@ if __name__ == "__main__":
     parser.add_argument("payload", nargs="?", help="JSON file exported from CiRA Debug; do not commit real classroom payloads")
     parser.add_argument("--mode", choices=["detections", "count"], default="detections")
     parser.add_argument("--session", type=int, help="optional for detections (defaults to the open session), required for count")
+    parser.add_argument("--room", help="room code, needed when several rooms have a class open")
     parser.add_argument("--width", type=int)
     parser.add_argument("--height", type=int)
     parser.add_argument("--image", help="optional same frame as the payload, for face check-in")
@@ -193,4 +197,4 @@ if __name__ == "__main__":
                 parser.error("cannot read image " + args.image)
         print(send_detections(json.loads(_read_text(args.payload)), args.token_file, session_id=args.session,
                               width=args.width, height=args.height, frame_bgr=frame, function=args.function,
-                              base_url=args.base_url, min_interval=0))
+                              base_url=args.base_url, min_interval=0, room=args.room))

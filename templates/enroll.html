@@ -12,8 +12,10 @@
     <div class="card-body">
       <div class="stage stage-43">
         <video id="video" autoplay playsinline muted hidden></video>
+        <div class="face-guide" id="face-guide" hidden></div>
         <div class="stage-empty" id="camera-empty">เปิดกล้องเพื่อถ่ายภาพใบหน้า</div>
       </div>
+      <p class="face-status" id="face-status" hidden></p>
       <div class="row">
         <button type="button" class="btn btn-secondary" id="camera-button">เปิดกล้อง</button>
         <button type="button" class="btn btn-primary" id="capture" disabled>ถ่ายภาพ</button>
@@ -54,9 +56,9 @@
         <span>เจ้าของใบหน้ายินยอมให้ใช้ภาพเพื่อเช็คชื่อในโครงงานนี้ และรับทราบว่าขอลบข้อมูลได้ทุกเมื่อ</span>
       </label>
       <ul class="tips">
-        <li>ถ่าย 3–8 ภาพ แต่ละภาพมีใบหน้าเดียว</li>
-        <li>หันซ้าย ขวา เงย ก้มเล็กน้อยระหว่างภาพ</li>
-        <li>แสงพอ ไม่ย้อนแสง ไม่ใส่แมสก์หรือแว่นกันแดด</li>
+        <li>วางหน้าให้อยู่ในกรอบเส้นประ เห็นครบทั้งคิ้ว ตา จมูก ปาก ไม่ชิดขอบภาพ</li>
+        <li>มองกล้องเกือบตรง ขยับหน้าเพียงเล็กน้อยระหว่างภาพ (ระบบจับได้เฉพาะหน้าตรง)</li>
+        <li>แสงพอ ไม่ย้อนแสง ไม่ใส่แมสก์หรือแว่นกันแดด ภาพที่ไม่พบใบหน้าจะไม่ถูกนับ</li>
       </ul>
       <div class="row">
         <button class="btn btn-primary" id="save-student" disabled>บันทึกใบหน้า</button>
