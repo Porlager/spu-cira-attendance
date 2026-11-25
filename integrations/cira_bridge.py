@@ -225,24 +225,24 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
         payload["room"] = room
     if frame_bgr is not None:
         height, width = frame_bgr.shape[:2]
-        # previews are only for the live view: a smaller picture encodes/uploads fast enough to keep the flow's frame rate up
-        payload["image"] = encode_frame(frame_bgr, max_width=1280 if full else 800, quality=85 if full else 70)
     if width is not None and height is not None:
         payload["width"], payload["height"] = int(width), int(height)
     _last_preview[function] = now
     if not full:
         payload["preview"] = True
-        if background and "image" not in payload:
-            if width is not None and height is not None:
-                payload["width"], payload["height"] = int(width), int(height)
+        frame = frame_bgr.copy() if background else frame_bgr  # the flow may reuse its buffer before the thread encodes it
 
-            def job():
-                payload["image"] = encode_frame(frame_bgr, max_width=800, quality=70)
-                post("/api/cira/frame", payload, token_file, base_url, timeout)
-            _submit(job)
-        else:
+        def send_preview():
+            # previews are only for the live view: a smaller picture encodes/uploads fast enough to keep the flow's frame rate up
+            payload["image"] = encode_frame(frame, max_width=800, quality=70)
             post("/api/cira/frame", payload, token_file, base_url, timeout)
+        if background:
+            _submit(send_preview)
+        else:
+            send_preview()
         return None
+    if frame_bgr is not None:
+        payload["image"] = encode_frame(frame_bgr)
     if isinstance(objects, dict):
         payload["cira_payload"] = payload_preview(objects)
     _last_sent[function] = now
