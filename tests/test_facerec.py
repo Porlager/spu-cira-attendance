@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 import numpy as np
 import pytest
 import behavior as bh
@@ -44,6 +45,46 @@ def test_bridge_forwards_facerec_and_sends_previews(monkeypatch):
     assert calls[1][1]['preview'] is True and 'cira_payload' not in calls[1][1]
     assert cira_bridge.send_detections(payload, 'unused', function='DeepDetect') is None  # no frame: nothing to preview
     assert len(calls) == 2
+
+
+def test_bridge_sends_previews_in_background(monkeypatch):
+    """A slow web app must not hold up the flow: the preview is encoded and sent on another thread."""
+    main, calls, pixels = threading.current_thread(), [], []
+    changed, busy, release, done = (threading.Event() for _ in range(4))
+
+    def slow_post(path, payload, *rest):
+        calls.append((threading.current_thread(), payload))
+        if payload.get('preview'):
+            busy.set()
+            release.wait(2)
+            done.set()
+        return {'ok': 1}
+
+    def encode(frame, max_width=1280, quality=85):
+        if threading.current_thread() is not main:
+            changed.wait(2)
+        pixels.append((max_width, int(frame.max())))
+        return 'jpeg'
+
+    monkeypatch.setattr(cira_bridge, 'post', slow_post)
+    monkeypatch.setattr(cira_bridge, 'encode_frame', encode)
+    monkeypatch.setattr(cira_bridge, '_last_sent', {})
+    monkeypatch.setattr(cira_bridge, '_last_preview', {})
+    payload = {'DeepDetect': {'im_w': 640, 'im_h': 480, 'objects': []}}
+    frame = np.zeros((480, 640, 3), np.uint8)
+    send = lambda: cira_bridge.send_detections(payload, 'unused', frame_bgr=frame, preview_interval=0.0001, background=True)
+    assert send() == {'ok': 1}  # full results still wait for the answer
+    cira_bridge._last_preview.clear()
+    assert send() is None
+    assert not done.is_set()  # returned while the web app was still busy
+    frame[:] = 255  # the flow may reuse its buffer before the picture is encoded
+    changed.set()
+    assert busy.wait(2)
+    release.set()
+    assert done.wait(2)
+    assert calls[0][0] is main and calls[1][0] is not main
+    assert calls[1][1]['preview'] is True and calls[1][1]['image'] == 'jpeg' and calls[1][1]['width'] == 640
+    assert pixels == [(1280, 0), (800, 0)]
 
 
 def face_frame(name, **extra):
