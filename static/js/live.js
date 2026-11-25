@@ -298,8 +298,10 @@
   window.addEventListener('resize', () => { if (data && mode === 'cira' && data.session) drawFrame(); });
   window.addEventListener('beforeunload', stopCamera);
   // Full data (roster, KPIs) once a second; picture and boxes four times a second.
+  let framing = false;
   async function frameTick() {
-    if (busy || !data || !data.session || document.hidden || mode !== 'cira') return;
+    if (busy || framing || !data || !data.session || document.hidden || mode !== 'cira') return;
+    framing = true;
     try {
       const lite = await json('/live?lite=1' + (sessionId ? '&session=' + sessionId : ''));
       if (!lite.frame || (data.frame && lite.frame.seq === data.frame.seq)) return;
@@ -314,8 +316,9 @@
       drawFrame();
       renderLegend();
     } catch (_) { /* the full tick reports errors */ }
+    finally { framing = false; }
   }
   tick();
   setInterval(tick, 1000);
-  setInterval(frameTick, 250);
+  setInterval(frameTick, 100);
 })();

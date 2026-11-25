@@ -1,10 +1,7 @@
-"""Call from a CiRA CORE Python+ node (see cira_python_plus.py), or run from the command line.
-The adapter accepts the documented DeepDetect payload; no CiRA SDK is assumed.
-Standard library only (cv2 is needed only when a frame is attached); works on Python 3.8+.
-"""
 import argparse
 import base64
 import json
+import threading
 import time
 try:
     from urllib.error import HTTPError
@@ -15,9 +12,35 @@ except ImportError:  # Python 2.7 used by ROS Melodic
 BASE_URL = "http://127.0.0.1:5050"
 _last_sent = {}
 _last_preview = {}
-_FACE_LISTS = ("faces", "objects", "results", "persons", "people", "detections")
+_FACE_LISTS = ("face_array", "faces", "objects", "results", "persons", "people", "detections")
 _NAME_KEYS = ("name", "label", "id", "class", "person")
 _monotonic = getattr(time, "monotonic", time.time)
+_pending = {"job": None}          # newest picture-only frame waiting for the background sender
+_wake = threading.Event()
+_worker = {"thread": None}
+
+
+def _sender():
+    while True:
+        _wake.wait()
+        _wake.clear()
+        job, _pending["job"] = _pending["job"], None
+        if job:
+            try:
+                job()
+            except Exception:  # a lost preview only costs one picture
+                pass
+
+
+def _submit(job):
+    """Run job on a background thread; only the newest waiting job is kept, so a slow web app never blocks the flow."""
+    _pending["job"] = job
+    if not _worker["thread"] or not _worker["thread"].is_alive():
+        _worker["thread"] = threading.Thread(target=_sender, name="spu-preview")
+        _worker["thread"].daemon = True
+        _worker["thread"].start()
+    _wake.set()
+
 
 def _read_text(path):
     with open(path, "r") as stream:
@@ -170,7 +193,7 @@ def encode_frame(frame_bgr, max_width=1280, quality=85):
 
 def send_detections(objects, token_file, session_id=None, width=None, height=None, frame_bgr=None,
                     function="DeepDetect", source="cira", base_url=BASE_URL, min_interval=1.0, timeout=10, room=None,
-                    preview_interval=0.2, include_faces=True):
+                    preview_interval=0.2, include_faces=True, background=False):
     """Send one frame of CiRA results to /api/cira/frame.
 
     objects: a DeepDetect payload or a list of {name, confidence, x, y, w, h}.
@@ -180,6 +203,7 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
     room: room code set by the admin (e.g. "11-501"); needed when several rooms have a class open.
     preview_interval: between full sends, frames with an image go out as light "preview" frames
     (picture + boxes only, nothing recorded) so the web view stays smooth. 0 disables previews.
+    background: send picture-only frames from a background thread (the flow never waits for the upload).
     include_faces: forward face-recognition results from other nodes (e.g. FaceRec) for check-in.
     Returns the server response for full sends, or None for previews and throttled frames.
     """
@@ -201,13 +225,23 @@ def send_detections(objects, token_file, session_id=None, width=None, height=Non
         payload["room"] = room
     if frame_bgr is not None:
         height, width = frame_bgr.shape[:2]
-        payload["image"] = encode_frame(frame_bgr, quality=85 if full else 70)
+        # previews are only for the live view: a smaller picture encodes/uploads fast enough to keep the flow's frame rate up
+        payload["image"] = encode_frame(frame_bgr, max_width=1280 if full else 800, quality=85 if full else 70)
     if width is not None and height is not None:
         payload["width"], payload["height"] = int(width), int(height)
     _last_preview[function] = now
     if not full:
         payload["preview"] = True
-        post("/api/cira/frame", payload, token_file, base_url, timeout)
+        if background and "image" not in payload:
+            if width is not None and height is not None:
+                payload["width"], payload["height"] = int(width), int(height)
+
+            def job():
+                payload["image"] = encode_frame(frame_bgr, max_width=800, quality=70)
+                post("/api/cira/frame", payload, token_file, base_url, timeout)
+            _submit(job)
+        else:
+            post("/api/cira/frame", payload, token_file, base_url, timeout)
         return None
     if isinstance(objects, dict):
         payload["cira_payload"] = payload_preview(objects)

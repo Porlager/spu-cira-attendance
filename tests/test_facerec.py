@@ -32,10 +32,14 @@ def test_bridge_forwards_facerec_and_sends_previews(monkeypatch):
     assert cira_bridge.extract_faces(payload) == [{'name': '66060711', 'x': 10, 'y': 20, 'w': 30, 'h': 40, 'distance': 21.9}]
     assert cira_bridge.extract_faces({'DeepDetect': {}}) is None
     assert cira_bridge.extract_faces({'FaceRec': {'faces': []}}) == []
+    real = {'count': 1, 'face_array': [{'name': '66060711', 'x': 10, 'y': 20, 'w': 30, 'h': 40}], 'im_w': 1280, 'im_h': 720}
+    assert cira_bridge.extract_faces({'FaceRec': real})[0]['name'] == '66060711'  # CiRA FaceRec's real key
+    assert cira_bridge.extract_faces({'FaceRec': dict(real, count=0, face_array=[])}) == []
     frame = np.zeros((480, 640, 3), np.uint8)
     assert cira_bridge.send_detections(payload, 'unused', frame_bgr=frame, function='DeepDetect') == {'ok': 1}
     full = calls[0][1]
     assert full['faces'][0]['name'] == '66060711' and 'preview' not in full and full['cira_payload']['FaceRec']
+    cira_bridge._last_preview.clear()  # Windows clock ticks are ~15 ms, so don't rely on a tiny interval elapsing
     assert cira_bridge.send_detections(payload, 'unused', frame_bgr=frame, function='DeepDetect', preview_interval=0.0001) is None
     assert calls[1][1]['preview'] is True and 'cira_payload' not in calls[1][1]
     assert cira_bridge.send_detections(payload, 'unused', function='DeepDetect') is None  # no frame: nothing to preview
